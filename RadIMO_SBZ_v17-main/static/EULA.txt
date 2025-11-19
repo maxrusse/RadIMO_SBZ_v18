@@ -1,0 +1,60 @@
+Verantwortlicher Entwickler für den aktuellen Inhalt und Konfiguration dieser Anwendung:
+xxxx
+
+
+Haftungsausschluss: Trotz sorgfältiger inhaltlicher Kontrolle übernehmen wir keine Haftung für die Inhalte externer Links. Für den Inhalt der verlinkten Seiten sind ausschließlich deren Betreiber verantwortlich.
+ 
+  
+EULA:
+
+RadIMO End User License Agreement (EULA) – Version 1.1
+
+Diese Lizenzvereinbarung („Vereinbarung“) regelt die Nutzung der Software-Anwendung „RadIMO – Radiology: Innovation, Management & Orchestration“ (im Folgenden „RadIMO“ oder „Tool“ genannt). Die Software wird von einem verantwortlichen Entwickler („Lizenzgeber“) bereitgestellt. Durch die Nutzung oder Installation von RadIMO akzeptiert der Anwender („Lizenznehmer“) sämtliche Bedingungen dieser Vereinbarung.
+
+1. Lizenzgewährung
+1.1 Kostenlose, widerrufliche Nutzung
+Der Lizenzgeber gewährt dem Lizenznehmer ein widerrufliches, nicht ausschließliches, nicht übertragbares Recht zur kostenlosen Nutzung des Tools zu internen, nicht kommerziellen Zwecken. Die kostenfreie Nutzung kann jederzeit und ohne Angabe von Gründen durch den Lizenzgeber widerrufen oder eingeschränkt werden.
+
+1.2 Kommerzielle Nutzung vorbehalten
+Der Lizenzgeber behält sich ausdrücklich vor, parallel zur kostenlosen Nutzung des Tools kommerzielle Lizenzen zu vergeben oder jederzeit eine kostenpflichtige Nutzungspflicht für bestehende Anwender einzuführen.
+
+2. Nutzungsbeschränkungen
+2.1 Verbot der Wiederverwendung (No Reuse)
+Der Lizenznehmer darf die Software weder modifizieren, noch anderweitig verwenden, kopieren, verteilen, lizenzieren oder Dritten zugänglich machen.
+
+2.2 Keine Modifikation
+Jegliche Modifikation, Dekompilierung oder Reverse-Engineering sind ausdrücklich untersagt, sofern nicht explizit vom Lizenzgeber schriftlich gestattet.
+
+3. Widerrufsrecht
+Die kostenfreie Nutzung kann jederzeit und ohne Vorankündigung durch den Lizenzgeber widerrufen werden. Nach einem solchen Widerruf hat der Lizenznehmer unverzüglich sämtliche Nutzung einzustellen und alle Kopien der Software zu löschen.
+
+4. Haftungsausschluss und Betriebsbedingungen
+4.1 Keine Gewährleistung (Tool „as is“)
+RadIMO wird im Ist-Zustand („as is“) ohne jegliche Garantien, insbesondere zur Sicherheit, Fehlerfreiheit oder Eignung für einen spezifischen Zweck zur Verfügung gestellt. RadIMO ist eine nicht abgesicherte Flask-Anwendung und darf nicht in kritischer Infrastruktur oder in sensiblen Produktionsumgebungen verwendet werden.
+
+4.2 Haftungsausschluss
+Der Lizenzgeber übernimmt keinerlei Verantwortung für Schäden oder Folgeschäden, die sich direkt oder indirekt aus der Nutzung oder Nichtverfügbarkeit des Tools ergeben.
+
+4.3 Serverbetrieb nicht Bestandteil der Lizenz 
+Hosting, Bereitstellung, Wartung und Betrieb der Software auf Servern sind ausdrücklich nicht Gegenstand dieser Lizenzvereinbarung. Diese Leistungen sind ausschließlich Angelegenheit des Lizenznehmers.
+
+5. Gewährleistung und Haftungsbeschränkung
+5.1 Gewährleistungsausschluss
+Es werden ausdrücklich keinerlei Garantien oder Gewährleistungen bezüglich der Funktionsfähigkeit oder Mängelfreiheit von RadIMO gegeben.
+
+5.2 Haftungsbeschränkung
+Die Haftung des Lizenzgebers für jegliche direkte oder indirekte Schäden, insbesondere Datenverluste, Betriebsunterbrechungen oder Folgeschäden, ist ausgeschlossen.
+
+6. Laufzeit und Kündigung der Lizenz
+Die Vereinbarung beginnt mit Nutzung des Tools durch den Lizenznehmer und gilt auf unbestimmte Zeit. Der Lizenzgeber hat das Recht, die Lizenz jederzeit und ohne Angabe von Gründen zu widerrufen oder die Bedingungen der Lizenz zu ändern. Bei Beendigung hat der Lizenznehmer die Nutzung unverzüglich einzustellen und sämtliche Kopien zu löschen.
+
+6. Sonstiges
+6.1 Änderungen
+Der Lizenzgeber ist berechtigt, die Bedingungen dieser Lizenzvereinbarung jederzeit anzupassen. Änderungen werden dem Lizenznehmer in geeigneter Form (z.B. auf der Website oder durch Benachrichtigung im Tool) mitgeteilt.
+
+6.2 Rechtswahl und Gerichtsstand
+Diese Vereinbarung unterliegt dem Recht der Bundesrepublik Deutschland. Ausschließlicher Gerichtsstand ist Freiburg im Breisgau.
+
+6.3 Salvatorische Klausel
+Sollte eine Bestimmung dieser Vereinbarung unwirksam oder undurchführbar sein, so berührt dies die Gültigkeit der übrigen Bestimmungen nicht. Die Parteien verpflichten sich, die unwirksame oder undurchführbare Bestimmung durch eine rechtswirksame und durchführbare Regelung zu ersetzen, die dem wirtschaftlichen Sinn und Zweck der unwirksamen oder undurchführbaren Bestimmung möglichst nahekommt.
+

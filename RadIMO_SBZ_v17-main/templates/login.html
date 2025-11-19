@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ modality|upper }} Admin - Login</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <style>
+    :root {
+      /* Color Variables */
+      --header-bg: #fff;
+      --tab-bg: #fff;
+      --tab-color: #000;
+      --body-bg: #f0f0f0;
+      --error-color: red;
+      
+      /* Navigation Colors */
+      --nav-ct: #1a5276;
+      --nav-mr: #777;
+      --nav-xray: #239b56;
+      
+      /* Modality-specific Backgrounds */
+      --ct-bg: #e6f2fa;
+      --mr-bg: #f9f9f9;
+      --xray-bg: #e0f2e9;
+    }
+    /* Global Styles */
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--body-bg);
+      padding: 1rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    body[data-modality="ct"] { background: var(--ct-bg); }
+    body[data-modality="mr"] { background: var(--mr-bg); }
+    body[data-modality="xray"] { background: var(--xray-bg); }
+    
+    /* Header & Selector */
+    .premium-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--header-bg);
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+    }
+    .premium-header h1 { font-size: 1.75rem; margin: 0; }
+    
+    .modality-selector {
+      display: flex;
+      gap: 1rem;
+    }
+    .modality-selector a {
+      text-decoration: none;
+      font-weight: bold;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      background: var(--tab-bg);
+      color: var(--tab-color);
+      border: 2px solid;
+      transition: border-width 0.2s;
+    }
+    .modality-selector a[data-modality="ct"] { border-color: var(--nav-ct); }
+    .modality-selector a[data-modality="mr"] { border-color: var(--nav-mr); }
+    .modality-selector a[data-modality="xray"] { border-color: var(--nav-xray); }
+    .modality-selector a.active { border-width: 4px; }
+    
+    /* Card Container */
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .login-container {
+      max-width: 460px; /* Increased from 400px to accommodate buttons better */
+      margin: 2rem auto;
+      text-align: center;
+    }
+    input[type="password"] {
+      padding: 10px;
+      font-size: 1rem;
+      width: 100%;
+      margin: 0.5rem 0;
+      box-sizing: border-box;
+    }
+    
+    /* Button Styles */
+    .modality-button {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin: 1rem 0.5rem;
+      transition: background 0.3s;
+      border: none;
+      cursor: pointer;
+      min-width: 100px; /* Reduced from 200px for better fitting */
+      flex: 1; /* Make buttons grow equally to fill space */
+    }
+    /* Modality-specific Button Colors */
+    body[data-modality="ct"] .modality-button { background: var(--nav-ct); }
+    body[data-modality="mr"] .modality-button { background: var(--nav-mr); }
+    body[data-modality="xray"] .modality-button { background: var(--nav-xray); }
+    /* Hover States */
+    body[data-modality="ct"] .modality-button:hover { background: #153f5b; }
+    body[data-modality="mr"] .modality-button:hover { background: #555; }
+    body[data-modality="xray"] .modality-button:hover { background: #1d7a48; }
+    
+    .error { color: var(--error-color); margin-bottom: 10px; }
+    
+    /* Container for buttons to ensure they are on one line */
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: nowrap; /* Changed from wrap to nowrap to prevent wrapping */
+      margin: 0 auto;
+      width: 100%;
+    }
+  </style>
+</head>
+<body data-modality="{{ modality }}">
+  <header class="premium-header">
+    <h1>{{ modality|upper }} Admin - Login</h1>
+    <div class="modality-selector">
+      <a href="{{ url_for('login', modality='ct') }}" data-modality="ct" class="{% if modality == 'ct' %}active{% endif %}">CT</a>
+      <a href="{{ url_for('login', modality='mr') }}" data-modality="mr" class="{% if modality == 'mr' %}active{% endif %}">MR</a>
+      <a href="{{ url_for('login', modality='xray') }}" data-modality="xray" class="{% if modality == 'xray' %}active{% endif %}">XRAY</a>
+    </div>
+  </header>
+  
+  <div class="card login-container">
+    <h2>Admin Login</h2>
+    {% if error %}
+      <p class="error">{{ error }}</p>
+    {% endif %}
+    <form method="post">
+      <input type="password" name="password" placeholder="Passwort" autofocus required>
+      <div class="button-group">
+        <button type="submit" class="modality-button">Login</button>
+        <a href="{{ url_for('index', modality=modality) }}" class="modality-button">Zurück</a>
+      </div>
+    </form>
+  </div>
+</body>
+</html>

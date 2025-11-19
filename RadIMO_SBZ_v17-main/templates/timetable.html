@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zeitplan - {{ modality|upper }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vis.min.css') }}">
+  <style>
+    :root {
+      /* Button Colors */
+      --normal-color:    #004892;
+      --notfall-color:   #dc3545;
+      --herz-color:      #28a745;
+      --privat-color:    #ffc107;
+      --msk-color:       #9c27b0;
+      --chest-color:     #ff9800;
+      --disabled-color:  #888;
+
+      /* Navigation Colors */
+      --nav-ct:          #1a5276;
+      --nav-mr:          #777;
+      --nav-xray:        #239b56;
+
+      /* Global & Other Colors */
+      --primary-color:   #004892;
+      --global-accent:   var(--normal-color);
+      --body-bg:         #f0f0f0;
+      --ct-bg:           #e6f2fa;
+      --mr-bg:           #f9f9f9;
+      --xray-bg:         #e0f2e9;
+      --header-bg:       #fff;
+      --tab-bg:          #fff;
+      --tab-color:       #000;
+      --card-bg:         #fff;
+      --info-box-border: #dc3545;
+      --info-item-bg:    #fff;
+      --info-item-shadow: rgba(0, 0, 0, 0.05);
+      --card-header-bg:  #f8f9fa;
+      --stats-header-bg: #f8f9fa;
+      --table-header-bg: #f8f9fa;
+      --highlight-bg:    rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Background based on modality */
+    body[data-modality="ct"] {
+      background: var(--ct-bg);
+      --modality-bg: var(--ct-bg);
+    }
+    body[data-modality="mr"] {
+      background: var(--mr-bg);
+      --modality-bg: var(--mr-bg);
+    }
+    body[data-modality="xray"] {
+      background: var(--xray-bg);
+      --modality-bg: var(--xray-bg);
+    }
+    
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 1rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    /* Premium header mimicking the admin page */
+    .premium-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--header-bg);
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+    }
+    .premium-header h1 {
+      font-size: 1.75rem;
+      margin: 0;
+    }
+    .modality-selector {
+      display: flex;
+      gap: 1rem;
+    }
+    .modality-selector a {
+      text-decoration: none;
+      font-weight: bold;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      background: var(--tab-bg);
+      color: var(--tab-color);
+      border: 2px solid;
+      transition: border-width 0.2s;
+    }
+    .modality-selector a[data-modality="ct"] { border-color: var(--nav-ct); }
+    .modality-selector a[data-modality="mr"] { border-color: var(--nav-mr); }
+    .modality-selector a[data-modality="xray"] { border-color: var(--nav-xray); }
+    .modality-selector a.active {
+      border-width: 4px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .timeline-card {
+      margin-bottom: 1rem;
+    }
+    #timeline-container {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 1rem;
+      background: #fff;
+      min-height: 150px;
+    }
+    .legend {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+    .legend-box {
+      width: 15px;
+      height: 15px;
+      margin-right: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+    }
+    .legend-box.skill-normal { background: var(--normal-color); }
+    .legend-box.skill-notfall { background: var(--notfall-color); }
+    .legend-box.skill-herz { background: var(--herz-color); }
+    .legend-box.skill-msk { background: var(--msk-color); }
+    .legend-box.skill-chest { background: var(--chest-color); }
+    .legend-box.skill-privat { background: var(--privat-color); }
+    /* Back button similar to admin page style */
+    .back-button {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin-top: 1rem;
+      background: var(--nav-ct);
+      transition: background 0.3s;
+    }
+    .back-button:hover {
+      background: #153f5b;
+    }
+  </style>
+</head>
+<body data-modality="{{ modality }}">
+  <header class="premium-header">
+    <h1>Zeitplan - {{ modality|upper }}</h1>
+    <div class="modality-selector">
+      <a href="{{ url_for('timetable', modality='ct') }}" data-modality="ct" class="{% if modality == 'ct' %}active{% endif %}">CT</a>
+      <a href="{{ url_for('timetable', modality='mr') }}" data-modality="mr" class="{% if modality == 'mr' %}active{% endif %}">MR</a>
+      <a href="{{ url_for('timetable', modality='xray') }}" data-modality="xray" class="{% if modality == 'xray' %}active{% endif %}">XRAY</a>
+    </div>
+  </header>
+  
+  <div class="card timeline-card">
+    <div id="timeline-container"></div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-box skill-normal"></div> Normal
+      </div>
+      <div class="legend-item">
+        <div class="legend-box skill-notfall"></div> Notfall
+      </div>
+      <div class="legend-item">
+        <div class="legend-box skill-herz"></div> Herz
+      </div>
+      <div class="legend-item">
+        <div class="legend-box skill-msk"></div> Msk
+      </div>
+      <div class="legend-item">
+        <div class="legend-box skill-chest"></div> Chest
+      </div>
+      <div class="legend-item">
+        <div class="legend-box skill-privat"></div> Privat
+      </div>
+    </div>
+  </div>
+  
+  <a href="{{ url_for('index', modality=modality) }}" class="back-button">Zurück zur Hauptseite</a>
+  
+  <script src="{{ url_for('static', filename='vis.min.js') }}"></script>
+  <script>
+    function buildGradient(skills) {
+      const stripeWidth = 10;
+      const gapWidth = 15;
+      if (!skills || skills.length === 0) {
+        return "background: #ffffff;";
+      }
+      if (skills.length === 1) {
+        return `background: repeating-linear-gradient(
+          90deg,
+          var(--${skills[0]}-color) 0px,
+          var(--${skills[0]}-color) ${stripeWidth}px,
+          #ffffff ${stripeWidth}px,
+          #ffffff ${stripeWidth + gapWidth}px
+        );`;
+      } else {
+        let stops = [];
+        for (let i = 0; i < skills.length; i++) {
+          let start = i * stripeWidth;
+          let end = start + stripeWidth;
+          stops.push(`var(--${skills[i]}-color) ${start}px, var(--${skills[i]}-color) ${end}px`);
+        }
+        let blockWidth = skills.length * stripeWidth;
+        stops.push(`#ffffff ${blockWidth}px, #ffffff ${blockWidth + gapWidth}px`);
+        let period = blockWidth + gapWidth;
+        return `background: repeating-linear-gradient(90deg, ${stops.join(', ')}, #ffffff ${period}px);`;
+      }
+    }
+    
+    function buildTimeline() {
+      const timelineContainer = document.getElementById('timeline-container');
+      let dfData;
+      try {
+        dfData = JSON.parse('{{ debug_data|safe }}');
+      } catch (e) {
+        console.error("Failed to parse timeline data:", e);
+        timelineContainer.innerHTML = "<p>Error loading timeline data</p>";
+        return;
+      }
+      // Filter out placeholder entries
+      dfData = dfData.filter(entry => entry.TIME !== '00:00-00:00');
+      if (dfData.length === 0) {
+        timelineContainer.innerHTML = "<p>No active schedule entries found</p>";
+        return;
+      }
+      const items = [];
+      const groups = [];
+      const groupMap = {};
+      dfData.forEach((entry) => {
+        const groupId = entry.PPL;
+        const startTimeParts = entry.start_time.split(':');
+        const startDateTime = new Date();
+        startDateTime.setHours(parseInt(startTimeParts[0], 10), parseInt(startTimeParts[1], 10), 0);
+        if (!groupMap[groupId]) {
+          groupMap[groupId] = { id: groupId, order: startDateTime };
+          groups.push(groupMap[groupId]);
+        } else {
+          if (startDateTime < groupMap[groupId].order) {
+            groupMap[groupId].order = startDateTime;
+          }
+        }
+      });
+      groups.sort((a, b) => a.order - b.order);
+      const finalGroups = groups.map(group => ({ id: group.id, content: group.id }));
+      dfData.forEach((entry, index) => {
+        const startTimeParts = entry.start_time.split(':');
+        const endTimeParts = entry.end_time.split(':');
+        const startDateTime = new Date();
+        startDateTime.setHours(parseInt(startTimeParts[0], 10), parseInt(startTimeParts[1], 10), 0);
+        const endDateTime = new Date();
+        endDateTime.setHours(parseInt(endTimeParts[0], 10), parseInt(endTimeParts[1], 10), 0);
+        const activeSkills = [];
+        if (entry.Normal > 0) activeSkills.push('normal');
+        if (entry.Notfall > 0) activeSkills.push('notfall');
+        if (entry.Herz > 0) activeSkills.push('herz');
+        if (entry.Privat > 0) activeSkills.push('privat');
+        if (entry.Msk > 0) activeSkills.push('msk');
+        if (entry.Chest > 0) activeSkills.push('chest');
+        const customClass = `timeline-item-${index}`;
+        const customStyle = document.createElement('style');
+        customStyle.textContent = `.${customClass} { ${buildGradient(activeSkills)} }`;
+        document.head.appendChild(customStyle);
+        items.push({
+          id: index,
+          group: entry.PPL,
+          start: startDateTime,
+          end: endDateTime,
+          content: '',
+          title: `${entry.PPL}<br>Zeit: ${entry.TIME}<br>Skills: ${activeSkills.join(', ')}`,
+          className: customClass
+        });
+      });
+      const today = new Date();
+      const options = {
+        zoomable: false,
+        moveable: true,
+        stack: false,
+        min: new Date(today.setHours(7, 0, 0)),
+        max: new Date(today.setHours(20, 0, 0)),
+        showCurrentTime: true,
+        format: {
+          minorLabels: {
+            hour: 'HH:mm',
+            minute: 'HH:mm'
+          }
+        },
+        orientation: {
+          axis: 'top',
+          item: 'top'
+        },
+        margin: { item: { vertical: 10 } },
+        verticalScroll: true,
+        //maxHeight: '800px'
+      };
+      const timeline = new vis.Timeline(timelineContainer, items, finalGroups, options);
+      setInterval(() => {
+        timeline.setCurrentTime(new Date());
+      }, 60000);
+      timeline.setWindow(
+        new Date(today.setHours(Math.max(7, new Date().getHours() - 1), 0, 0)),
+        new Date(today.setHours(Math.min(20, new Date().getHours() + 2), 0, 0))
+      );
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      buildTimeline();
+    });
+  </script>
+</body>
+</html>

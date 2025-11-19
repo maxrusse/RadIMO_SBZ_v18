@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ modality|upper }} Admin - Upload & Verwaltung</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vis.min.css') }}">
+  <style>
+
+    
+    :root {
+      /* Button Colors */
+      --normal-color:    #004892;  /* Normal */
+      --privat-color:    #ffc107;  /* Privat */
+      --herz-color:      #28a745;  /* Herz */
+      --msk-color:       #9c27b0;  /* Msk */
+      --chest-color:     #ff9800;  /* Chest */
+      --notfall-color:   #dc3545;  
+      --disabled-color:  #888;
+
+      /* Navigation Colors */
+      --nav-ct:          #1a5276;
+      --nav-mr:          #777;
+      --nav-xray:        #239b56;
+
+      /* Global & Other Colors */
+      --primary-color:   #004892;
+      --global-accent:   var(--normal-color);
+      --body-bg:         #f0f0f0;
+      --ct-bg:           #e6f2fa;
+      --mr-bg:           #f9f9f9;
+      --xray-bg:         #e0f2e9;
+      --header-bg:       #fff;
+      --tab-bg:          #fff;
+      --tab-color:       #000;
+      --card-bg:         #fff;
+      --result-panel-bg: #f0f8ff;
+      --clipboard-bg:    #f0f8ff;
+      --info-box-border: #dc3545;
+      --info-item-bg:    #fff;
+      --info-item-shadow: rgba(0, 0, 0, 0.05);
+      --card-header-bg:  #f8f9fa;
+      --stats-header-bg: #f8f9fa;
+      --table-header-bg: #f8f9fa;
+      --highlight-bg:    rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Fallback gradient for no-skill case */
+    .skill-none {
+      background: #aaa;
+    }
+    
+    /* Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--body-bg);
+      padding: 1rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    body[data-modality="ct"] { background: var(--ct-bg); }
+    body[data-modality="mr"] { background: var(--mr-bg); }
+    body[data-modality="xray"] { background: var(--xray-bg); }
+    
+    /* Modal styles for password input */
+    #authModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #authModal .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 5px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    #authModal input[type="password"] {
+      padding: 10px;
+      font-size: 1rem;
+      width: 200px;
+      margin-top: 10px;
+    }
+    #authModal button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    
+    /* Premium Header with Embedded Modality Selector */
+    .premium-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--header-bg);
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+    }
+    .premium-header h1 {
+      font-size: 1.75rem;
+      margin: 0;
+    }
+    .modality-selector {
+      display: flex;
+      gap: 1rem;
+    }
+    .modality-selector a {
+      text-decoration: none;
+      font-weight: bold;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      background: var(--tab-bg);
+      color: var(--tab-color);
+      border: 2px solid;
+      transition: border-width 0.2s;
+    }
+    .modality-selector a[data-modality="ct"] { border-color: var(--nav-ct); }
+    .modality-selector a[data-modality="mr"] { border-color: var(--nav-mr); }
+    .modality-selector a[data-modality="xray"] { border-color: var(--nav-xray); }
+    .modality-selector a.active {
+      border-width: 4px;
+    }
+    
+    /* Back, Upload & Download Buttons */
+    .back-button, .upload-button, .download-button {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin: 1rem 0;
+      transition: background 0.3s;
+      border: none;
+      cursor: pointer;
+    }
+    body[data-modality="ct"] .back-button,
+    body[data-modality="ct"] .upload-button,
+    body[data-modality="ct"] .download-button {
+      background: var(--nav-ct);
+    }
+    body[data-modality="mr"] .back-button,
+    body[data-modality="mr"] .upload-button,
+    body[data-modality="mr"] .download-button {
+      background: var(--nav-mr);
+    }
+    body[data-modality="xray"] .back-button,
+    body[data-modality="xray"] .upload-button,
+    body[data-modality="xray"] .download-button {
+      background: var(--nav-xray);
+    }
+    body[data-modality="ct"] .back-button:hover,
+    body[data-modality="ct"] .upload-button:hover,
+    body[data-modality="ct"] .download-button:hover {
+      background: #153f5b;
+    }
+    body[data-modality="mr"] .back-button:hover,
+    body[data-modality="mr"] .upload-button:hover,
+    body[data-modality="mr"] .download-button:hover {
+      background: #555;
+    }
+    body[data-modality="xray"] .back-button:hover,
+    body[data-modality="xray"] .upload-button:hover,
+    body[data-modality="xray"] .download-button:hover {
+      background: #1d7a48;
+    }
+    
+    /* New Generic Modality Button */
+    .modality-button {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin: 1rem 0;
+      transition: background 0.3s;
+      border: none;
+      cursor: pointer;
+      background: var(--global-accent);
+    }
+    body[data-modality="ct"] .modality-button { background: var(--nav-ct); }
+    body[data-modality="mr"] .modality-button { background: var(--nav-mr); }
+    body[data-modality="xray"] .modality-button { background: var(--nav-xray); }
+    body[data-modality="ct"] .modality-button:hover { background: #153f5b; }
+    body[data-modality="mr"] .modality-button:hover { background: #555; }
+    body[data-modality="xray"] .modality-button:hover { background: #1d7a48; }
+    
+    /* File Upload & Custom File */
+    .custom-file {
+      position: relative;
+      display: inline-block;
+      overflow: hidden;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      margin-top: 0.5rem;
+      transition: background 0.3s;
+    }
+    .custom-file:hover { background: #f9f9f9; }
+    .custom-file input[type="file"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      cursor: pointer;
+      height: 100%;
+      width: 100%;
+    }
+    .custom-file #fileName { pointer-events: none; }
+    
+    .radio-group label { display: block; margin-bottom: 0.5rem; cursor: pointer; }
+    
+    /* Card Styles */
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .form-group { margin-bottom: 1rem; }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+    input[type="text"],
+    input[type="number"],
+    input[type="file"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    
+    /* Table & Debug Section */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+    .debug-info table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+    }
+    .debug-info th,
+    .debug-info td {
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    body[data-modality="ct"] .active-row {
+      background-color: var(--ct-bg) !important;
+    }
+
+    body[data-modality="mr"] .active-row {
+      background-color: var(--mr-bg) !important;
+    }
+
+    body[data-modality="xray"] .active-row {
+   /*   background-color: var(--xray-bg) !important; */
+    background-color: #fff !important; /* white for XRAY */
+        
+    }
+    
+    /* Edit Form */
+    .edit-form .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .edit-form .form-group { flex: 1; min-width: 200px; }
+    
+    /* Timeline */
+    .timeline-card { margin-bottom: 1rem; }
+    #timeline-container {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 1rem;
+      background: #fff;
+      min-height: 150px;
+    }
+    .legend { display: flex; gap: 1rem; margin-top: 0.5rem; }
+    .legend-item { display: flex; align-items: center; font-size: 0.9rem; }
+    .legend-box {
+      width: 15px;
+      height: 15px;
+      margin-right: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+    }
+    .legend-box.skill-normal { background: var(--normal-color); }
+    .legend-box.skill-notfall { background: var(--notfall-color); }
+    .legend-box.skill-herz { background: var(--herz-color); }
+    .legend-box.skill-msk { background: var(--msk-color); }
+    .legend-box.skill-chest { background: var(--chest-color); }
+    .legend-box.skill-privat { background: var(--privat-color); }
+  </style>
+
+</head>
+<body data-modality="{{ modality }}">
+  <!-- Main content container -->
+  <div id="content">
+    <!-- Premium Header with Embedded Modality Selector -->
+    <header class="premium-header">
+      <h1>{{ modality|upper }} Admin - Upload & Verwaltung</h1>
+      <div class="modality-selector">
+        <a href="{{ url_for('upload_file', modality='ct') }}" data-modality="ct" class="{% if modality == 'ct' %}active{% endif %}">CT</a>
+        <a href="{{ url_for('upload_file', modality='mr') }}" data-modality="mr" class="{% if modality == 'mr' %}active{% endif %}">MR</a>
+        <a href="{{ url_for('upload_file', modality='xray') }}" data-modality="xray" class="{% if modality == 'xray' %}active{% endif %}">XRAY</a>
+      </div>
+    </header>
+
+ 
+    <!-- Back Button -->
+    <a href="{{ url_for('index', modality=modality) }}" class="back-button">Zurück zur Hauptseite</a>
+    <a href="{{ url_for('logout', modality=modality) }}" class="back-button">Logout</a>
+
+      <!-- Statistics Section -->
+      
+    <div class="card">
+      <h2>Statistiken</h2>
+      <div class="table-container">
+        <div class="debug-info">
+          <table>
+            <thead>
+              <tr>
+                <th>MA</th>
+                {% for skill in ['Normal', 'Notfall', 'Privat', 'Herz', 'Msk', 'Chest'] %}
+                  <th>{{ skill }}</th>
+                {% endfor %}
+                <th>∑</th>
+                <th>W (Global)</th>
+              </tr>
+            </thead>
+            <tbody id="modalityStatsBody">
+              {% for worker in combined_workers %}
+                <tr>
+                  <td>{{ worker }}</td>
+                  {% for skill in ['Normal', 'Notfall', 'Privat', 'Herz', 'Msk', 'Chest'] %}
+                    {% set mod_val = modality_stats[worker][skill] %}
+                    {% set global_val = global_counts[worker][skill] if global_counts[worker] and skill in global_counts[worker] else 0 %}
+                    <td>
+                      {% if mod_val == global_val %}
+                        {{ mod_val }}
+                      {% else %}
+                        {{ mod_val }} | {{ global_val }}
+                      {% endif %}
+                    </td>
+                  {% endfor %}
+                  {% set mod_total = modality_stats[worker]['total'] %}
+                  {% set global_total = global_counts[worker].total if global_counts[worker] and 'total' in global_counts[worker] else 0 %}
+                  <td>
+                    {% if mod_total == global_total %}
+                      {{ mod_total }}
+                    {% else %}
+                      {{ mod_total }} | {{ global_total }}
+                    {% endif %}
+                  </td>
+                  <td>
+                    {{ "%.1f"|format(global_weighted_counts[worker] if worker in global_weighted_counts else 0) }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Datei Upload Section -->
+    <div class="card file-upload-card" style="padding: 0.75rem 1rem;">
+      <h2 style="margin-bottom: 0.5rem;">Datei Upload</h2>
+      <form action="{{ url_for('upload_file', modality=modality) }}" method="post" enctype="multipart/form-data" class="upload-form">
+        <div class="form-row" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: nowrap; margin-bottom: 0.75rem;">
+          <div class="custom-file" style="position: relative; width: 180px; height: 2.2rem;">
+            <input type="file" name="file" id="fileInput" accept=".xlsx" onchange="updateFileName(this)" style="width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+            <span id="fileName" style="position: absolute; top: 50%; left: 0.5rem; transform: translateY(-50%); pointer-events: none; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 160px;">Datei wählen</span>
+          </div>
+          <div style="display: flex; align-items: center; white-space: nowrap; font-size: 0.9rem;">
+            <label style="margin: 0 0.3rem 0 0;">Modus:</label>
+            <label style="margin: 0 0.5rem 0 0; display: flex; align-items: center;">
+              <input type="radio" name="scheduled_upload" value="0" checked style="margin-right: 0.2rem;"> Sofort
+            </label>
+            <label style="margin: 0; display: flex; align-items: center;">
+              <input type="radio" name="scheduled_upload" value="1" style="margin-right: 0.2rem;"> 07:30
+            </label>
+          </div>
+          <button type="submit" class="upload-button" style="padding: 0.4rem 0.8rem; font-size: 0.9rem; height: 2.2rem; margin: 0;">Upload</button>
+        </div>
+        <div class="form-row" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: nowrap;">
+          <label style="margin: 0; font-size: 0.9rem; white-space: nowrap;">Download File:</label>
+          <a href="{{ url_for('download_file', modality=modality) }}" class="download-button" style="padding: 0.4rem 0.8rem; font-size: 0.9rem; height: 2.2rem; margin: 0;">Letzte</a>
+          <a href="{{ url_for('download_latest', modality=modality) }}" class="download-button" style="padding: 0.4rem 0.8rem; font-size: 0.9rem; height: 2.2rem; margin: 0;">Live-Backup</a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Debug / Data Overview Section -->
+    <div class="card">
+      <h2>Zeiten Übersicht ({{ modality|upper }})</h2>
+      <div class="debug-info">
+        <div class="table-container">
+          {{ debug_info|safe }}
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Edit Entry Section with tighter layout -->
+    <div class="card">
+      <h2>Bearbeiten der Einträge</h2>
+      <div class="edit-form">
+        <form action="{{ url_for('edit_entry') }}" method="post">
+          <input type="hidden" name="modality" value="{{ modality }}">
+
+          <!-- First row: Index, Person, Time, Modifier -->
+          <div class="form-row" style="margin-bottom: 0.5rem;">
+            <div class="form-group" style="flex: 0.5; min-width: 100px;">
+              <label for="index" style="margin-bottom: 0.2rem;">Index:</label>
+              <input type="number" id="index" name="index" placeholder="z.B. 0" oninput="loadEntry()" style="padding: 0.3rem;">
+              <small style="font-size: 0.7rem;">Index aus der Tabelle</small>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 150px;">
+              <label for="person" style="margin-bottom: 0.2rem;">Person:</label>
+              <input type="text" id="person" name="person" required placeholder="Name (Kürzel)" style="padding: 0.3rem;">
+              <small style="font-size: 0.7rem;">Format: Name (Kürzel)</small>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 150px;">
+              <label for="time" style="margin-bottom: 0.2rem;">Zeit:</label>
+              <input type="text" id="time" name="time" pattern="\d{2}:\d{2}-\d{2}:\d{2}" required placeholder="07:00-14:00" style="padding: 0.3rem;">
+              <small style="font-size: 0.7rem;">Format HH:MM-HH:MM</small>
+            </div>
+            <div class="form-group" style="flex: 0.5; min-width: 100px;">
+              <label for="modifier" style="margin-bottom: 0.2rem;">Modifier:</label>
+              <input type="text" id="modifier" name="modifier" required placeholder="1.0" style="padding: 0.3rem;">
+              <small style="font-size: 0.7rem;">z.B. 0.5 für halbe Arbeit</small>
+            </div>
+          </div>
+
+          <!-- Second row: Skills with compact toggles -->
+          <div class="form-row" style="margin-bottom: 0.5rem; display: flex; align-items: flex-end;">
+            <!-- Skill toggles in a more compact format -->
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              {% for skill, color in [('normal', 'normal'), ('notfall', 'notfall'), ('privat', 'privat'), ('herz', 'herz'), ('msk', 'msk'), ('chest', 'chest')] %}
+                <div class="form-group" style="min-width: auto; margin-bottom: 0; display: flex; align-items: center; padding: 0.2rem 0.5rem;">
+                  <label for="{{ skill }}" style="margin: 0; margin-right: 0.3rem; font-weight: normal; display: flex; align-items: center;">
+                    <div style="width: 12px; height: 12px; background: var(--{{ color }}-color); margin-right: 0.3rem; border-radius: 2px;"></div>
+                    {{ skill|capitalize }}:
+                  </label>
+                  <select id="{{ skill }}" name="{{ skill }}" style="width: 40px; padding: 0.2rem; border-radius: 3px; text-align: center;">
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                  </select>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Legend as small plain text matching other help text format -->
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <small style="font-size: 0.7rem;">
+              Gewichtung: 0 = Ausschluss, 1 = Normale Einteilung, 2 = Bevorzugt bis 125%
+            </small>
+          </div>
+
+          <!-- Button row with smaller buttons -->
+          <div class="form-row" style="margin-bottom: 0; justify-content: flex-start; gap: 0.5rem;">
+            <button type="submit" class="modality-button" style="padding: 0.4rem 0.8rem; margin: 0;">Aktualisieren/Hinzufügen</button>
+            <button type="button" class="modality-button" onclick="deleteEntry()" style="padding: 0.4rem 0.8rem; margin: 0;">Löschen</button>
+          </div>
+        </form>
+        <form id="deleteForm" action="{{ url_for('delete_entry') }}" method="post" style="display:none;">
+          <input type="hidden" id="deleteIndex" name="index">
+          <input type="hidden" name="modality" value="{{ modality }}">
+        </form>
+      </div>
+    </div>
+
+
+      
+    <!-- Timeline Section -->
+    <div class="card timeline-card">
+      <h2>Zeitplan</h2>
+      <div id="timeline-container"></div>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-box skill-normal"></div> Normal
+        </div>
+        <div class="legend-item">
+          <div class="legend-box skill-notfall"></div> Notfall
+        </div>
+        <div class="legend-item">
+          <div class="legend-box skill-herz"></div> Herz
+        </div>
+        <div class="legend-item">
+          <div class="legend-box skill-msk"></div> Msk
+        </div>
+        <div class="legend-item">
+          <div class="legend-box skill-chest"></div> Chest
+        </div>
+        <div class="legend-item">
+          <div class="legend-box skill-privat"></div> P
+        </div>
+      </div>
+    </div>
+
+      
+
+
+      
+      
+    <!-- Info Text bearbeiten Section -->
+    <div class="card">
+      <h2>Info Text bearbeiten</h2>
+      <form action="{{ url_for('edit_info') }}" method="post">
+        <input type="hidden" name="modality" value="{{ modality }}">
+        <div class="form-group">
+          <label for="info_text">Info Text (jede Zeile entspricht einer Info):</label>
+          <textarea id="info_text" name="info_text" rows="5" style="width: 100%;">{{ info_texts | join('\n') }}</textarea>
+        </div>
+        <button type="submit" class="modality-button">Info Text aktualisieren</button>
+      </form>
+    </div>
+      
+    <button onclick="toggleSummaryStats()" class="modality-button" style="padding: 0.4rem 0.8rem; margin: 0;">Full Stats</button>
+
+    <div id="summaryStatsContainer" class="card" style="display: none;">
+      <h2>Zusammenfassung (Gesamtstatistik)</h2>
+      <div class="table-container">
+        <div class="debug-info">
+          <table>
+            <thead>
+              <tr>
+                <th>MA</th>
+                <th>CT</th>
+                <th>MR</th>
+                <th>XRAY</th>
+                <th>∑</th>
+                <th>W (Global)</th>
+              </tr>
+            </thead>
+            <tbody id="summaryStatsBody">
+              <tr><td colspan="6">Lade Daten...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+     
+      
+      
+    </div>
+    
+
+
+
+
+    <!-- Back Button -->
+    <a href="{{ url_for('index', modality=modality) }}" class="back-button">Zurück zur Hauptseite</a>
+    <a href="{{ url_for('logout', modality=modality) }}" class="back-button">Logout</a>
+    
+  <script src="{{ url_for('static', filename='vis.min.js') }}"></script>
+  <script>
+    function updateFileName(input) {
+      var fileName = input.files.length ? input.files[0].name : "Keine ausgewählt";
+      document.getElementById("fileName").textContent = fileName;
+    }
+    
+    // Updated loadEntry function: fetches data for a given index.
+    function loadEntry() {
+      const i = document.getElementById('index').value;
+      if (i !== '') {
+        fetch(`/get_entry?modality={{ modality }}&index=${i}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.error) {
+              alert(data.error);
+            } else {
+              document.getElementById('person').value = data.person;
+              document.getElementById('time').value = data.time;
+              const optionalFields = ['modifier', 'normal', 'notfall', 'herz', 'privat', 'msk', 'chest'];
+              optionalFields.forEach(field => {
+                document.getElementById(field).value = (field in data) ? data[field] : 0;
+              });
+            }
+          });
+      }
+    }
+    
+    function deleteEntry() {
+      const i = document.getElementById('index').value;
+      if (i !== '') {
+        document.getElementById('deleteIndex').value = i;
+        document.getElementById('deleteForm').submit();
+      } else {
+        alert('Bitte Index angeben.');
+      }
+    }
+
+    // Generic gradient builder (used for timeline items)
+    function buildGradient(skills) {
+      const stripeWidth = 10;
+      const gapWidth = 15;
+      if (!skills || skills.length === 0) {
+        return "background: #ffffff;";
+      }
+      if (skills.length === 1) {
+        return `background: repeating-linear-gradient(
+          90deg,
+          var(--${skills[0]}-color) 0px,
+          var(--${skills[0]}-color) ${stripeWidth}px,
+          #ffffff ${stripeWidth}px,
+          #ffffff ${stripeWidth + gapWidth}px
+        );`;
+      } else {
+        let stops = [];
+        for (let i = 0; i < skills.length; i++) {
+          let start = i * stripeWidth;
+          let end = start + stripeWidth;
+          stops.push(`var(--${skills[i]}-color) ${start}px, var(--${skills[i]}-color) ${end}px`);
+        }
+        let blockWidth = skills.length * stripeWidth;
+        stops.push(`#ffffff ${blockWidth}px, #ffffff ${blockWidth + gapWidth}px`);
+        let period = blockWidth + gapWidth;
+        return `background: repeating-linear-gradient(90deg, ${stops.join(', ')}, #ffffff ${period}px);`;
+      }
+    }
+    
+    function buildTimeline() {
+      const timelineContainer = document.getElementById('timeline-container');
+      if (!timelineContainer) {
+        console.error("Timeline container not found");
+        return;
+      }
+      let dfData;
+      try {
+        dfData = JSON.parse('{{ debug_data|safe }}');
+        console.log("Loaded timeline data:", dfData);
+      } catch (e) {
+        console.error("Failed to parse timeline data:", e);
+        timelineContainer.innerHTML = "<p>Error loading timeline data</p>";
+        return;
+      }
+      dfData = dfData.filter(entry => entry.TIME !== '00:00-00:00');
+      if (dfData.length === 0) {
+        timelineContainer.innerHTML = "<p>No active schedule entries found</p>";
+        return;
+      }
+      const items = [];
+      const groups = [];
+      const groupMap = {};
+      dfData.forEach((entry) => {
+        const groupId = entry.PPL;
+        const startTimeParts = entry.start_time.split(':');
+        const startDateTime = new Date();
+        startDateTime.setHours(parseInt(startTimeParts[0], 10), parseInt(startTimeParts[1], 10), 0);
+        if (!groupMap[groupId]) {
+          groupMap[groupId] = { id: groupId, order: startDateTime };
+          groups.push(groupMap[groupId]);
+        } else {
+          if (startDateTime < groupMap[groupId].order) {
+            groupMap[groupId].order = startDateTime;
+          }
+        }
+      });
+      groups.sort((a, b) => a.order - b.order);
+      const finalGroups = groups.map(group => ({ id: group.id, content: group.id }));
+      dfData.forEach((entry, index) => {
+        const startTimeParts = entry.start_time.split(':');
+        const endTimeParts = entry.end_time.split(':');
+        const startDateTime = new Date();
+        startDateTime.setHours(parseInt(startTimeParts[0], 10), parseInt(startTimeParts[1], 10), 0);
+        const endDateTime = new Date();
+        endDateTime.setHours(parseInt(endTimeParts[0], 10), parseInt(endTimeParts[1], 10), 0);
+        const activeSkills = [];
+        if (entry.Normal > 0) activeSkills.push('normal');
+        if (entry.Notfall > 0) activeSkills.push('notfall');
+        if (entry.Herz > 0) activeSkills.push('herz');
+        if (entry.Privat > 0) activeSkills.push('privat');
+        if (entry.Msk > 0) activeSkills.push('msk');
+        if (entry.Chest > 0) activeSkills.push('chest');
+        const customClass = `timeline-item-${index}`;
+        const customStyle = document.createElement('style');
+        customStyle.textContent = `.${customClass} { ${buildGradient(activeSkills)} }`;
+        document.head.appendChild(customStyle);
+        items.push({
+          id: index,
+          group: entry.PPL,
+          start: startDateTime,
+          end: endDateTime,
+          content: '',
+          title: `${entry.PPL}<br>Zeit: ${entry.TIME}<br>Skills: ${activeSkills.join(', ')}`,
+          className: customClass
+        });
+      });
+      const today = new Date();
+      const options = {
+        zoomable: false,
+        moveable: true,
+        stack: false,
+        min: new Date(today.setHours(7, 0, 0)),
+        max: new Date(today.setHours(20, 0, 0)),
+        showCurrentTime: true,
+        format: {
+          minorLabels: { hour: 'HH:mm', minute: 'HH:mm' }
+        },
+        orientation: { axis: 'top', item: 'top' },
+        margin: { item: { vertical: 10 } },
+        verticalScroll: true,
+      };
+      const timeline = new vis.Timeline(timelineContainer, items, finalGroups, options);
+      setInterval(() => {
+        timeline.setCurrentTime(new Date());
+      }, 60000);
+      timeline.setWindow(
+        new Date(today.setHours(Math.max(7, new Date().getHours() - 1), 0, 0)),
+        new Date(today.setHours(Math.min(20, new Date().getHours() + 2), 0, 0))
+      );
+    }
+    
+    document.addEventListener("DOMContentLoaded", function() {
+      buildTimeline();
+    });
+
+    /**
+     * Updates the modality-specific statistics table (first table).
+     */
+    function updateUploadStats() {
+        fetch(`/api/quick_reload?modality={{ modality }}`)
+            .then(response => response.json())
+            .then(data => {
+                let modalityRows = "";
+                const workers = Object.keys(data.Summe).sort((a, b) =>
+                    data.Summe[b] - data.Summe[a] || a.localeCompare(b)
+                );
+
+                workers.forEach(worker => {
+                    modalityRows += `<tr class="stats-row"><td>${worker}</td>`;
+
+                    let totalForWorker = 0;
+
+                    // Loop through skills and compute modality-based count
+                    ["Normal", "Notfall", "Privat", "Herz", "Msk", "Chest"].forEach(skill => {
+                        const currentModCount = data[skill][worker] || 0;
+                        const globalModCount = data.Global[worker]?.[skill] || 0;
+                        const extraCount = globalModCount - currentModCount;
+
+                        let displayValue = currentModCount;
+                        if (extraCount > 0) {
+                            displayValue += ` (+${extraCount} ${getModalityAbbreviation(worker, data.Global[worker])})`;
+                        }
+                        modalityRows += `<td>${displayValue}</td>`;
+                        totalForWorker += currentModCount;
+                    });
+
+                    // Compute total with possible extras
+                    const currentModTotal = data.Summe[worker] || 0;
+                    const globalModTotal = data.Global[worker]?.total || 0;
+                    const totalExtra = globalModTotal - currentModTotal;
+
+                    let displayTotal = currentModTotal;
+                    if (totalExtra > 0) {
+                        displayTotal += ` (+${totalExtra} ${getModalityAbbreviation(worker, data.Global[worker])})`;
+                    }
+
+                    // 🛠 Fix: Ensure Global Weight is Correctly Displayed
+                    const globalWeighted = (data.GlobalWeighted && data.GlobalWeighted[worker] !== undefined) 
+                        ? parseFloat(data.GlobalWeighted[worker]).toFixed(1) 
+                        : "N/A"; 
+
+                    modalityRows += `<td>${displayTotal}</td><td>${globalWeighted}</td></tr>`;
+                });
+
+                document.getElementById("modalityStatsBody").innerHTML = modalityRows;
+            })
+            .catch(error => console.error("Error updating stats:", error));
+    }
+
+    /**
+     * Generates the summary table (Gesamtstatistik) for all modalities.
+     * It fetches data separately for CT, MR, and XRAY,
+     * then combines the counts, computes a total and overall weighted value,
+     * and finally builds the table rows using the same styling as the other tables.
+     */
+    function updateSummaryTable() {
+      Promise.all([
+        fetch('/api/quick_reload?modality=ct').then(r => r.json()),
+        fetch('/api/quick_reload?modality=mr').then(r => r.json()),
+        fetch('/api/quick_reload?modality=xray').then(r => r.json())
+      ])
+        .then(([ctData, mrData, xrayData]) => {
+          let summaryData = {};
+
+          // Gather all worker IDs based on the "Summe" property from each modality.
+          const allWorkers = new Set([
+            ...Object.keys(ctData.Summe || {}),
+            ...Object.keys(mrData.Summe || {}),
+            ...Object.keys(xrayData.Summe || {})
+          ]);
+
+          allWorkers.forEach(worker => {
+            // Get the total count for each modality (defaulting to 0 if missing)
+            const ctVal = ctData.Summe && ctData.Summe[worker] ? parseInt(ctData.Summe[worker]) : 0;
+            const mrVal = mrData.Summe && mrData.Summe[worker] ? parseInt(mrData.Summe[worker]) : 0;
+            const xrayVal = xrayData.Summe && xrayData.Summe[worker] ? parseInt(xrayData.Summe[worker]) : 0;
+
+            const total = ctVal + mrVal + xrayVal
+            
+            // Get global weighted values per modality (defaulting to 0)
+            const ctWeighted = ctData.GlobalWeighted && ctData.GlobalWeighted[worker] ? parseFloat(ctData.GlobalWeighted[worker]) : 0;
+            const mrWeighted = mrData.GlobalWeighted && mrData.GlobalWeighted[worker] ? parseFloat(mrData.GlobalWeighted[worker]) : 0;
+            const xrayWeighted = xrayData.GlobalWeighted && xrayData.GlobalWeighted[worker] ? parseFloat(xrayData.GlobalWeighted[worker]) : 0;
+
+            // Use the highest weighted value among modalities
+            const weighted = Math.max(ctWeighted, mrWeighted, xrayWeighted);
+
+            summaryData[worker] = {
+              ct: ctVal,
+              mr: mrVal,
+              xray: xrayVal,
+              total: total,
+              weighted: weighted
+            };
+          });
+
+          // Sort workers descending by their weighted count.
+          let sortedWorkers = Object.keys(summaryData).sort((a, b) =>
+            summaryData[b].weighted - summaryData[a].weighted
+          );
+
+          // Build the table rows matching the header:
+          let summaryRows = "";
+          sortedWorkers.forEach(worker => {
+            summaryRows += `<tr class="stats-row">
+              <td>${worker}</td>
+              <td>${summaryData[worker].ct}</td>
+              <td>${summaryData[worker].mr}</td>
+              <td>${summaryData[worker].xray}</td>
+              <td>${summaryData[worker].total}</td>
+              <td>${summaryData[worker].weighted.toFixed(1)}</td>
+            </tr>`;
+          });
+
+          document.getElementById("summaryStatsBody").innerHTML = summaryRows;
+        })
+        .catch(error => console.error("Error updating summary stats:", error));
+    }
+
+
+
+    // On page load, update the summary table and set an interval for refresh.
+    document.addEventListener("DOMContentLoaded", function() {
+      updateSummaryTable(); // Update global summary table on load.
+      setInterval(updateSummaryTable, 60000); // Refresh every 60 seconds.
+    });
+
+  document.addEventListener("DOMContentLoaded", function() {
+    const now = new Date();
+    let activeWorkers = new Set();
+
+    // Parse timeline data from debug_data
+    try {
+      const timelineData = JSON.parse('{{ debug_data|safe }}') || [];
+      timelineData.forEach(entry => {
+        if (entry.TIME === '00:00-00:00') return;
+        const start = new Date();
+        const end = new Date();
+        const [startHour, startMin] = entry.start_time.split(':');
+        const [endHour, endMin] = entry.end_time.split(':');
+        start.setHours(parseInt(startHour, 10), parseInt(startMin, 10), 0);
+        end.setHours(parseInt(endHour, 10), parseInt(endMin, 10), 0);
+        if (now >= start && now <= end) {
+          activeWorkers.add(entry.PPL);
+        }
+      });
+    } catch (e) {
+      console.error("Error parsing debug_data:", e);
+    }
+
+    // Update the Statistik table rows (assuming the worker name is in the first <td>)
+    document.querySelectorAll("#modalityStatsBody tr").forEach(row => {
+      const worker = row.querySelector("td").textContent.trim();
+      if (activeWorkers.has(worker)) {
+        row.classList.add("active-row");
+      } else {
+        row.classList.remove("active-row");
+      }
+    });
+
+    // Update the Zeiten Übersicht (CT) table rows (assuming the worker name is in the first <td>)
+    document.querySelectorAll(".debug-info table tr").forEach(row => {
+      const workerCell = row.querySelector("td");
+      if (workerCell) {
+        const worker = workerCell.textContent.trim();
+        if (activeWorkers.has(worker)) {
+          row.classList.add("active-row");
+        } else {
+          row.classList.remove("active-row");
+        }
+      }
+    });
+  });
+
+  </script>
+    
+    <script>
+      function toggleSummaryStats() {
+        var container = document.getElementById("summaryStatsContainer");
+        container.style.display = (container.style.display === "none" || container.style.display === "") ? "block" : "none";
+      }
+    </script>
+    
+</body>
+</html>

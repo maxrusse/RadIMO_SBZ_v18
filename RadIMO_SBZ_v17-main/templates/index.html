@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RadIMO: {{ modality|upper }} Koordinator</title>
+  <style>
+    :root {
+      /* Button Colors */
+      --normal-color:    #004892;
+      --notfall-color:   #dc3545;
+      --herz-color:      #28a745;
+      --privat-color:    #ffc107;
+      --msk-color:       #9c27b0;
+      --chest-color:     #ff9800;
+      --disabled-color:  #888;
+
+      /* Navigation Colors */
+      --nav-ct:          #1a5276;
+      --nav-mr:          #777;
+      --nav-xray:        #239b56;
+
+      /* Global & Other Colors */
+      --primary-color:   #004892;
+      --global-accent:   var(--normal-color);
+      --body-bg:         #f0f0f0;
+      --ct-bg:           #e6f2fa;
+      --mr-bg:           #f9f9f9;
+      --xray-bg:         #e0f2e9;
+      --header-bg:       #fff;
+      --tab-bg:          #fff;
+      --tab-color:       #000;
+      --card-bg:         #fff;
+      --info-box-border: #dc3545;
+      --info-item-bg:    #fff;
+      --info-item-shadow: rgba(0, 0, 0, 0.05);
+      --card-header-bg:  #f8f9fa;
+      --stats-header-bg: #f8f9fa;
+      --table-header-bg: #f8f9fa;
+      --highlight-bg:    rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--body-bg);
+      padding: 1rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    body[data-modality="ct"] {
+      background: var(--ct-bg);
+      --modality-bg: var(--ct-bg);
+    }
+    body[data-modality="mr"] {
+      background: var(--mr-bg);
+      --modality-bg: var(--mr-bg);
+    }
+    body[data-modality="xray"] {
+      background: var(--xray-bg);
+      --modality-bg: var(--xray-bg);
+    }
+    
+    /* Apply modality background to result-panel and clipboard-note */
+    body[data-modality="ct"] .result-panel,
+    body[data-modality="ct"] .clipboard-note {
+      background: var(--ct-bg);
+    }
+    body[data-modality="mr"] .result-panel,
+    body[data-modality="mr"] .clipboard-note {
+      background: var(--mr-bg);
+    }
+    body[data-modality="xray"] .result-panel,
+    body[data-modality="xray"] .clipboard-note {
+      background: var(--xray-bg);
+    }
+    
+    /* Premium Header with Modality Selector */
+    .premium-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--header-bg);
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+    }
+    
+    .premium-header h1 {
+      font-size: 1.75rem;
+      margin: 0;
+    }
+    
+    .modality-selector {
+      display: flex;
+      gap: 1rem;
+    }
+    .modality-selector a {
+      text-decoration: none;
+      font-weight: bold;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      background: var(--tab-bg);
+      color: var(--tab-color);
+      border: 2px solid;
+      transition: border-width 0.2s;
+    }
+    .modality-selector a[data-modality="ct"] { border-color: var(--nav-ct); }
+    .modality-selector a[data-modality="mr"] { border-color: var(--nav-mr); }
+    .modality-selector a[data-modality="xray"] { border-color: var(--nav-xray); }
+    .modality-selector a.active {
+      border-width: 4px;
+    }
+    
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    /* Grid layout for buttons */
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: auto auto;
+      gap: 1rem;
+      border: 4px solid;
+      border-radius: 8px;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .btn {
+      border: none;
+      border-radius: 8px;
+      font-size: 2rem;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      padding: 2rem 1rem;
+      text-align: center;
+      transition: all 0.2s;
+      min-height: 120px;
+      position: relative;
+    }
+    .btn:disabled, .btn.btn-disabled {
+      background-color: var(--disabled-color) !important;
+      cursor: not-allowed;
+      opacity: 0.7;
+      color: #ddd !important;
+    }
+    .btn:disabled::after, .btn.btn-disabled::after {
+      content: "Bitte warten...";
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      right: 0;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-normal  { background: var(--normal-color); }
+    .btn-notfall { background: var(--notfall-color); }
+    .btn-herz    { background: var(--herz-color); }
+    .btn-privat  { background: var(--privat-color); color: #333; }
+    .btn-msk     { background: var(--msk-color); }
+    .btn-chest   { background: var(--chest-color); }
+    .special-btn {
+      min-height: 60px;
+      font-size: 1.8rem;
+      padding: 1rem;
+    }
+    
+    .result-panel {
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .assigned-person {
+      font-size: 2rem;
+      font-weight: 600;
+      margin: 0.5rem 0;
+    }
+    .timer { color: #666; font-size: 1rem; }
+    
+    .clipboard-note {
+      color: var(--primary-color);
+      padding: 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .small-button {
+      font-size: 0.9rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      text-decoration: none;
+      color: #fff;
+      background: var(--normal-color);
+      margin-left: 0.5rem;
+    }    
+    .info-box {
+      border: 2px solid var(--info-box-border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    .info-item {
+      background: var(--info-item-bg);
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+      font-size: 1rem;
+      box-shadow: 0 1px 2px var(--info-item-shadow);
+    }
+    .info-item:last-child { margin-bottom: 0; }
+    
+    /* Click History Logo as Mini Logos */
+    .click-history-wrapper {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .click-history {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    .click-history-box {
+      width: 30px;
+      height: 30px;
+      border-radius: 4px;
+      background-color: var(--modality-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.5s ease, transform 0.5s ease;
+    }
+    .click-history-box:first-child {
+      transform: translateY(-2px) rotate(-20deg);
+    }
+    .click-history-box:last-child {
+      transform: translateY(2px) rotate(20deg);
+    }
+    .click-history-text {
+      font-size: 12px;
+      color: #333;
+    }
+    .click-history-text .radimo {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .click-history-text .subtitle {
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .click-history-text .license {
+      font-size: 10px;
+      color: #555;
+    }
+  </style>
+</head>
+<body data-modality="{{ modality }}">
+  <!-- Premium Header with Embedded Modality Selector -->
+  <header class="premium-header">
+    <h1>RadIMO: {{ modality|upper }} Koordinator</h1>
+    <div class="modality-selector">
+      <a href="{{ url_for('index', modality='ct') }}" data-modality="ct" class="{% if modality == 'ct' %}active{% endif %}">CT</a>
+      <a href="{{ url_for('index', modality='mr') }}" data-modality="mr" class="{% if modality == 'mr' %}active{% endif %}">MR</a>
+      <a href="{{ url_for('index', modality='xray') }}" data-modality="xray" class="{% if modality == 'xray' %}active{% endif %}">XRAY</a>
+    </div>
+  </header>
+  
+  <!-- Main Assignment Panel -->
+  <section class="card">
+    <div id="buttonGrid" class="button-grid">
+      {% set skills = [
+        {'name': 'Normal', 'class': 'btn-normal'},
+        {'name': 'Notfall', 'class': 'btn-notfall'},
+        {'name': 'Privat', 'class': 'btn-privat', 'optional': true},
+        {'name': 'Herz',   'class': 'btn-herz',   'optional': true, 'special': true},
+        {'name': 'Msk',    'class': 'btn-msk',    'optional': true, 'special': true},
+        {'name': 'Chest',  'class': 'btn-chest',  'optional': true, 'special': true}
+      ] %}
+      {% for skill in skills %}
+        <button id="next{{ skill.name }}Button"
+          onclick="getNextAssignment('{{ skill.name }}')"
+          class="btn assignment-btn {{ skill.class }} {% if skill.special|default(false) %}special-btn{% endif %}"
+          {% if skill.optional and not available_specialties[skill.name] %}style="display: none;"{% endif %}
+          style="grid-column: {{ loop.index0 % 3 + 1 }}; grid-row: {{ 1 if loop.index0 < 3 else 2 }};">
+          {{ skill.name }}
+        </button>
+      {% endfor %}
+    </div>
+    <div id="result"></div>
+    <div class="clipboard-note" style="display: flex; justify-content: space-between; align-items: center;">
+      <span>Kürzel wird automatisch kopiert, Einfügen mit STRG+V im RadCenter</span>
+      <div>
+        <a href="{{ url_for('timetable', modality=modality) }}" class="small-button">Zeitplan</a>
+        <a href="{{ url_for('upload_file', modality=modality) }}" class="small-button">Admin</a>
+      </div>
+    </div>
+    <div class="info-box">
+      <div class="info-texts">
+        {% for info in info_texts %}
+          <div class="info-item">{{ info }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  
+  <!-- Click History Logo as Mini Logos -->
+  <div class="click-history-wrapper">
+    <div id="clickHistory" class="click-history"></div>
+    <div class="click-history-text">
+      <div class="radimo">RadIMO v17</div>
+      <div class="subtitle">Radiology: Innovation, Management & Orchestration</div>
+      <div class="license">
+        <a href="{{ url_for('static', filename='EULA.txt') }}" target="_blank">
+          Impressum und EULA - Kontakt Dr. M. Russe
+        </a>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const clickHistoryCount = 15;
+    const modalityBg = getComputedStyle(document.body).getPropertyValue('--modality-bg').trim();
+    let clickHistoryColors = new Array(clickHistoryCount).fill({ color: modalityBg });
+    const clickHistoryContainer = document.getElementById('clickHistory');
+    for (let i = 0; i < clickHistoryCount; i++) {
+      const box = document.createElement('div');
+      box.classList.add('click-history-box');
+      box.style.backgroundColor = modalityBg;
+      clickHistoryContainer.appendChild(box);
+    }
+    
+    function updateClickHistory(newColor) {
+      const newEntry = { color: newColor };
+      clickHistoryColors.pop();
+      clickHistoryColors.unshift(newEntry);
+      document.querySelectorAll('#clickHistory .click-history-box').forEach((box, index) => {
+        box.style.backgroundColor = clickHistoryColors[index].color;
+        box.innerHTML = "";
+      });
+    }
+    
+    document.getElementById('buttonGrid').addEventListener('click', function(e) {
+      const button = e.target.closest('button');
+      if (button) {
+        const bgColor = getComputedStyle(button).backgroundColor;
+        updateClickHistory(bgColor);
+      }
+    });
+    
+    let requestInProgress = false;
+    let timerInterval, lastClickTime, disableTimeout;
+    let currentModality = "{{ modality }}";
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      setInterval(quickReload, 60000); // Set up auto-refresh of buttons every minute
+      quickReload(); // Initial load
+    });
+    
+    function quickReload() {
+      fetch('/api/quick_reload?modality={{ modality }}')
+        .then(response => response.json())
+        .then(data => {
+          for (const [skill, isAvailable] of Object.entries(data.available_buttons)) {
+            const button = document.getElementById(`next${skill}Button`);
+            if (button) button.style.display = isAvailable ? '' : 'none';
+          }
+        })
+        .catch(e => console.error("Quick reload error:", e));
+    }
+    
+    function getNextAssignment(skill) {
+      if (requestInProgress) return;
+      updateButtonsState(true);
+      fetch(`/api/${currentModality}/${skill}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data['Assigned Person']) {
+            showResult(data['Assigned Person']);
+          }
+        })
+        .catch(e => {
+          console.error("API error:", e);
+          alert('Fehler beim Abrufen.');
+        });
+    }
+    
+    function showResult(person) {
+      const resultDiv = document.getElementById('result');
+      if (!person || person === "") {
+        person = "Niemand verfügbar";
+      }
+      resultDiv.innerHTML = `
+        <div class="result-panel">
+          <div class="assigned-person">${person}</div>
+          <div class="timer" id="timer"></div>
+        </div>
+      `;
+      startTimer();
+      const match = person.match(/\(([^)]+)\)/);
+      if (match && match[1]) copyTextToClipboard(match[1]);
+    }
+    
+    function startTimer() {
+      lastClickTime = new Date();
+      updateTimer();
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(updateTimer, 1000);
+    }
+    
+    function updateTimer() {
+      const now = new Date();
+      const secondsElapsed = Math.floor((now - lastClickTime) / 1000);
+      const hours = Math.floor(secondsElapsed / 3600);
+      const minutes = Math.floor((secondsElapsed % 3600) / 60);
+      const seconds = secondsElapsed % 60;
+      document.getElementById('timer').textContent =
+        "Zeit seit letzter Zuweisung: " +
+        hours.toString().padStart(2, '0') + ":" +
+        minutes.toString().padStart(2, '0') + ":" +
+        seconds.toString().padStart(2, '0');
+    }
+    
+    function copyTextToClipboard(text) {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+      } catch (e) {
+        console.error(e);
+      }
+      document.body.removeChild(textarea);
+    }
+    
+    function updateButtonsState(disabled) {
+      if (!disabled && requestInProgress) return;
+      requestInProgress = disabled;
+      document.querySelectorAll('.assignment-btn').forEach(button => {
+        button.disabled = disabled;
+        disabled ? button.classList.add('btn-disabled') : button.classList.remove('btn-disabled');
+      });
+      if (disableTimeout) clearTimeout(disableTimeout);
+      if (disabled) {
+        disableTimeout = setTimeout(() => {
+          requestInProgress = false;
+          document.querySelectorAll('.assignment-btn').forEach(button => {
+            button.disabled = false;
+            button.classList.remove('btn-disabled');
+          });
+        }, 3000);
+      }
+    }
+  </script>
+</body>
+</html>
