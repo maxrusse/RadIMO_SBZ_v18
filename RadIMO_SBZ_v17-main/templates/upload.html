@@ -15,7 +15,7 @@
       --privat-color:    #ffc107;  /* Privat */
       --herz-color:      #28a745;  /* Herz */
       --msk-color:       #9c27b0;  /* Msk */
-      --chest-color:     #ff9800;  /* Chest */
+      --gyn-color:     #ff9800;  /* Gyn */
       --notfall-color:   #dc3545;  
       --disabled-color:  #888;
 
@@ -316,7 +316,7 @@
     .legend-box.skill-notfall { background: var(--notfall-color); }
     .legend-box.skill-herz { background: var(--herz-color); }
     .legend-box.skill-msk { background: var(--msk-color); }
-    .legend-box.skill-chest { background: var(--chest-color); }
+    .legend-box.skill-gyn { background: var(--gyn-color); }
     .legend-box.skill-privat { background: var(--privat-color); }
   </style>
 
@@ -349,7 +349,7 @@
             <thead>
               <tr>
                 <th>MA</th>
-                {% for skill in ['Normal', 'Notfall', 'Privat', 'Herz', 'Msk', 'Chest'] %}
+                {% for skill in ['Normal', 'Notfall', 'Privat', 'Herz', 'Msk', 'Gyn'] %}
                   <th>{{ skill }}</th>
                 {% endfor %}
                 <th>∑</th>
@@ -360,7 +360,7 @@
               {% for worker in combined_workers %}
                 <tr>
                   <td>{{ worker }}</td>
-                  {% for skill in ['Normal', 'Notfall', 'Privat', 'Herz', 'Msk', 'Chest'] %}
+                  {% for skill in ['Normal', 'Notfall', 'Privat', 'Herz', 'Msk', 'Gyn'] %}
                     {% set mod_val = modality_stats[worker][skill] %}
                     {% set global_val = global_counts[worker][skill] if global_counts[worker] and skill in global_counts[worker] else 0 %}
                     <td>
@@ -467,7 +467,7 @@
           <div class="form-row" style="margin-bottom: 0.5rem; display: flex; align-items: flex-end;">
             <!-- Skill toggles in a more compact format -->
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              {% for skill, color in [('normal', 'normal'), ('notfall', 'notfall'), ('privat', 'privat'), ('herz', 'herz'), ('msk', 'msk'), ('chest', 'chest')] %}
+              {% for skill, color in [('normal', 'normal'), ('notfall', 'notfall'), ('privat', 'privat'), ('herz', 'herz'), ('msk', 'msk'), ('gyn', 'gyn')] %}
                 <div class="form-group" style="min-width: auto; margin-bottom: 0; display: flex; align-items: center; padding: 0.2rem 0.5rem;">
                   <label for="{{ skill }}" style="margin: 0; margin-right: 0.3rem; font-weight: normal; display: flex; align-items: center;">
                     <div style="width: 12px; height: 12px; background: var(--{{ color }}-color); margin-right: 0.3rem; border-radius: 2px;"></div>
@@ -523,7 +523,7 @@
           <div class="legend-box skill-msk"></div> Msk
         </div>
         <div class="legend-item">
-          <div class="legend-box skill-chest"></div> Chest
+          <div class="legend-box skill-gyn"></div> Gyn
         </div>
         <div class="legend-item">
           <div class="legend-box skill-privat"></div> P
@@ -605,7 +605,7 @@
             } else {
               document.getElementById('person').value = data.person;
               document.getElementById('time').value = data.time;
-              const optionalFields = ['modifier', 'normal', 'notfall', 'herz', 'privat', 'msk', 'chest'];
+              const optionalFields = ['modifier', 'normal', 'notfall', 'herz', 'privat', 'msk', 'gyn'];
               optionalFields.forEach(field => {
                 document.getElementById(field).value = (field in data) ? data[field] : 0;
               });
@@ -705,7 +705,7 @@
         if (entry.Herz > 0) activeSkills.push('herz');
         if (entry.Privat > 0) activeSkills.push('privat');
         if (entry.Msk > 0) activeSkills.push('msk');
-        if (entry.Chest > 0) activeSkills.push('chest');
+        if (entry.Gyn > 0) activeSkills.push('gyn');
         const customClass = `timeline-item-${index}`;
         const customStyle = document.createElement('style');
         customStyle.textContent = `.${customClass} { ${buildGradient(activeSkills)} }`;
@@ -767,7 +767,7 @@
                     let totalForWorker = 0;
 
                     // Loop through skills and compute modality-based count
-                    ["Normal", "Notfall", "Privat", "Herz", "Msk", "Chest"].forEach(skill => {
+                    ["Normal", "Notfall", "Privat", "Herz", "Msk", "Gyn"].forEach(skill => {
                         const currentModCount = data[skill][worker] || 0;
                         const globalModCount = data.Global[worker]?.[skill] || 0;
                         const extraCount = globalModCount - currentModCount;

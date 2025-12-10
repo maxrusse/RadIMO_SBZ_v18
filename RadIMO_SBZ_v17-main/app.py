@@ -43,7 +43,7 @@ lock = Lock()
 # -----------------------------------------------------------
 # Global constants & modality-specific factors
 # -----------------------------------------------------------
-SKILL_COLUMNS = ["Normal", "Notfall", "Privat", "Herz", "Msk", "Chest"]
+SKILL_COLUMNS = ["Normal", "Notfall", "Privat", "Herz", "Msk", "Gyn"]
 
 # Base weight per role
 skill_weights = {
@@ -52,7 +52,7 @@ skill_weights = {
     "Herz":    1.2,
     "Privat":  1.2,
     "Msk":     0.8,
-    "Chest":   0.8
+    "Gyn":   0.8
 }
 
 # Modality-specific multiplier: CT=1, MR=1.2, X-Ray=0.33
@@ -268,14 +268,14 @@ def initialize_data(file_path: str, modality: str):
             df['start_time'], df['end_time'] = zip(*df['TIME'].map(parse_time_range))
 
             # Process core skills
-            core_skills = ["Normal", "Notfall", "Privat", "Herz", "Msk", "Chest"]
+            core_skills = ["Normal", "Notfall", "Privat", "Herz", "Msk", "Gyn"]
             for skill in core_skills:
                 if skill not in df.columns:
                     df[skill] = 0
                 else:
                     df[skill] = df[skill].fillna(0).astype(int)
 
-            # Process optional skills (Herz, Msk, Chest)
+            # Process optional skills (Herz, Msk, Gyn)
             optional_skills = [s for s in SKILL_COLUMNS if s not in core_skills]
             for skill in optional_skills:
                 if skill in df.columns:
@@ -295,7 +295,7 @@ def initialize_data(file_path: str, modality: str):
 
             # Set column order as desired
             col_order = ['PPL', 'canonical_id', 'Modifier', 'TIME', 'start_time', 'end_time', 'shift_duration']
-            desired_order = ["Normal", "Notfall", "Privat", "Herz", "Msk", "Chest"]
+            desired_order = ["Normal", "Notfall", "Privat", "Herz", "Msk", "Gyn"]
             skill_cols = [skill for skill in desired_order if skill in df.columns]
             col_order = col_order[:4] + skill_cols + col_order[4:]
             df = df[[col for col in col_order if col in df.columns]]
@@ -341,7 +341,7 @@ def get_active_df_for_role(active_df: pd.DataFrame, role: str):
         'herz':    'Herz',
         'privat':  'Privat',
         'msk':     'Msk',
-        'chest':   'Chest'
+        'gyn':   'Gyn'
     }
     role_lower = role.lower()
     if role_lower not in role_map:
@@ -354,7 +354,7 @@ def get_active_df_for_role(active_df: pd.DataFrame, role: str):
         'Herz': ['Notfall', 'Normal'],
         'Privat': ['Notfall', 'Normal'],
         'Msk': ['Notfall', 'Normal'],
-        'Chest': ['Notfall', 'Normal']
+        'Gyn': ['Notfall', 'Normal']
     }
     
     if primary_column not in active_df.columns:
@@ -760,10 +760,10 @@ def upload_file():
     for worker in combined_workers:
         modality_stats[worker] = {
             skill: skill_counts.get(skill, {}).get(worker, 0)
-            for skill in ['Normal', 'Notfall', 'Privat', 'Herz', 'Msk', 'Chest']
+            for skill in ['Normal', 'Notfall', 'Privat', 'Herz', 'Msk', 'Gyn']
         }
         modality_stats[worker]['total'] = sum(
-            modality_stats[worker][skill] for skill in ['Normal', 'Notfall', 'Privat', 'Herz', 'Msk', 'Chest']
+            modality_stats[worker][skill] for skill in ['Normal', 'Notfall', 'Privat', 'Herz', 'Msk', 'Gyn']
         )
 
     # 6. Get info texts.
@@ -846,7 +846,7 @@ def _assign_worker(modality: str, role: str):
                     "Herz": skill_counts["Herz"],
                     "Privat": skill_counts["Privat"],
                     "Msk": skill_counts["Msk"],
-                    "Chest": skill_counts["Chest"],
+                    "Gyn": skill_counts["Gyn"],
                     "Summe": sum_counts,
                     "Global": global_stats
                 }
@@ -863,7 +863,7 @@ def _assign_worker(modality: str, role: str):
                     "Herz": skill_counts["Herz"],
                     "Privat": skill_counts["Privat"],
                     "Msk": skill_counts["Msk"],
-                    "Chest": skill_counts["Chest"],
+                    "Gyn": skill_counts["Gyn"],
                     "Summe": sum_counts,
                     "Global": {}
                 }
@@ -1124,7 +1124,7 @@ def quick_reload():
         "Herz": skill_counts.get("Herz", {}),
         "Privat": skill_counts.get("Privat", {}),
         "Msk": skill_counts.get("Msk", {}),
-        "Chest": skill_counts.get("Chest", {}),
+        "Gyn": skill_counts.get("Gyn", {}),
         "Summe": sum_counts,
         "Global": global_stats,
         "GlobalWeighted": global_weighted_counts,
