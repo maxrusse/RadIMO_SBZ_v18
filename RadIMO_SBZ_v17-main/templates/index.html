@@ -12,7 +12,7 @@
       --herz-color:      #28a745;
       --privat-color:    #ffc107;
       --msk-color:       #9c27b0;
-      --chest-color:     #ff9800;
+      --gyn-color:     #ff9800;
       --disabled-color:  #888;
 
       /* Navigation Colors */
@@ -170,7 +170,7 @@
     .btn-herz    { background: var(--herz-color); }
     .btn-privat  { background: var(--privat-color); color: #333; }
     .btn-msk     { background: var(--msk-color); }
-    .btn-chest   { background: var(--chest-color); }
+    .btn-gyn   { background: var(--gyn-color); }
     .special-btn {
       min-height: 60px;
       font-size: 1.8rem;
@@ -291,7 +291,7 @@
         {'name': 'Privat', 'class': 'btn-privat', 'optional': true},
         {'name': 'Herz',   'class': 'btn-herz',   'optional': true, 'special': true},
         {'name': 'Msk',    'class': 'btn-msk',    'optional': true, 'special': true},
-        {'name': 'Chest',  'class': 'btn-chest',  'optional': true, 'special': true}
+        {'name': 'Gyn',  'class': 'btn-gyn',  'optional': true, 'special': true}
       ] %}
       {% for skill in skills %}
         <button id="next{{ skill.name }}Button"

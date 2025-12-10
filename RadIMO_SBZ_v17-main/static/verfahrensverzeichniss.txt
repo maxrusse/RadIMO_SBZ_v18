@@ -88,5 +88,5 @@ Aktuelle Version:
 
 Änderungen:
   - Einführung der Backup-Logik (tagesaktuell)
-  - Flexible Spaltenerkennung (Herz, Msk, Chest)
+  - Flexible Spaltenerkennung (Herz, Msk, Gyn)
   - Verbesserte UI-Darstellung & Statistikübersicht

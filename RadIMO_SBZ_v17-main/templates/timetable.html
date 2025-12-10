@@ -13,7 +13,7 @@
       --herz-color:      #28a745;
       --privat-color:    #ffc107;
       --msk-color:       #9c27b0;
-      --chest-color:     #ff9800;
+      --gyn-color:     #ff9800;
       --disabled-color:  #888;
 
       /* Navigation Colors */
@@ -134,7 +134,7 @@
     .legend-box.skill-notfall { background: var(--notfall-color); }
     .legend-box.skill-herz { background: var(--herz-color); }
     .legend-box.skill-msk { background: var(--msk-color); }
-    .legend-box.skill-chest { background: var(--chest-color); }
+    .legend-box.skill-gyn { background: var(--gyn-color); }
     .legend-box.skill-privat { background: var(--privat-color); }
     /* Back button similar to admin page style */
     .back-button {
@@ -179,7 +179,7 @@
         <div class="legend-box skill-msk"></div> Msk
       </div>
       <div class="legend-item">
-        <div class="legend-box skill-chest"></div> Chest
+        <div class="legend-box skill-gyn"></div> Gyn
       </div>
       <div class="legend-item">
         <div class="legend-box skill-privat"></div> Privat
@@ -267,7 +267,7 @@
         if (entry.Herz > 0) activeSkills.push('herz');
         if (entry.Privat > 0) activeSkills.push('privat');
         if (entry.Msk > 0) activeSkills.push('msk');
-        if (entry.Chest > 0) activeSkills.push('chest');
+        if (entry.Gyn > 0) activeSkills.push('gyn');
         const customClass = `timeline-item-${index}`;
         const customStyle = document.createElement('style');
         customStyle.textContent = `.${customClass} { ${buildGradient(activeSkills)} }`;
