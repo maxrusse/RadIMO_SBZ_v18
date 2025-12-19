@@ -142,35 +142,147 @@ def get_all_workers_by_canonical_id():
     return canonical_to_variations
 
 def validate_excel_structure(df: pd.DataFrame, required_columns) -> (bool, str):
+    """
+    Comprehensive validation of Excel file structure and data formats.
+    Returns (is_valid, error_message) tuple.
+    """
     # Rename column "PP" to "Privat" if it exists
     if "PP" in df.columns:
         df.rename(columns={"PP": "Privat"}, inplace=True)
 
+    # Check for missing required columns
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
         return False, f"Fehlende Spalten: {', '.join(missing_columns)}"
-    
-    # Example format checks:
+
+    # Validate PPL column (must not be empty)
+    if 'PPL' in df.columns:
+        if df['PPL'].isna().any():
+            empty_rows = df[df['PPL'].isna()].index.tolist()
+            return False, f"Spalte 'PPL' enthält leere Zellen in Zeilen: {empty_rows}"
+
+    # Validate TIME format - must be HH:MM-HH:MM
     if 'TIME' in df.columns:
-        try:
-            df['TIME'].apply(parse_time_range)
-        except Exception as e:
-            return False, f"Falsches Zeitformat in Spalte 'TIME': {str(e)}"
+        for idx, time_val in enumerate(df['TIME']):
+            if pd.isna(time_val):
+                return False, f"Spalte 'TIME' enthält leere Zelle in Zeile {idx + 2}"
 
+            time_str = str(time_val).strip()
+
+            # Check for common errors: dots instead of colons
+            if '.' in time_str and ':' not in time_str:
+                return False, f"Falsches Zeitformat in Zeile {idx + 2}: '{time_str}' - Verwenden Sie ':' statt '.' (z.B. '11:15' statt '11.15')"
+
+            # Check for dash separator
+            if '-' not in time_str:
+                return False, f"Falsches Zeitformat in Zeile {idx + 2}: '{time_str}' - Format muss 'HH:MM-HH:MM' sein (z.B. '08:00-16:00')"
+
+            # Try to parse the time range
+            try:
+                parts = time_str.split('-')
+                if len(parts) != 2:
+                    return False, f"Falsches Zeitformat in Zeile {idx + 2}: '{time_str}' - Genau ein '-' Zeichen erwartet"
+
+                start_str, end_str = parts[0].strip(), parts[1].strip()
+
+                # Validate format HH:MM
+                for time_part, label in [(start_str, "Start"), (end_str, "Ende")]:
+                    if ':' not in time_part:
+                        return False, f"Falsches Zeitformat in Zeile {idx + 2}: {label}zeit '{time_part}' muss Format 'HH:MM' haben"
+
+                    time_components = time_part.split(':')
+                    if len(time_components) != 2:
+                        return False, f"Falsches Zeitformat in Zeile {idx + 2}: {label}zeit '{time_part}' muss Format 'HH:MM' haben"
+
+                    hour_str, minute_str = time_components
+
+                    # Check if components are numeric
+                    if not hour_str.isdigit() or not minute_str.isdigit():
+                        return False, f"Falsches Zeitformat in Zeile {idx + 2}: {label}zeit '{time_part}' enthält nicht-numerische Zeichen"
+
+                    hour, minute = int(hour_str), int(minute_str)
+
+                    # Validate ranges
+                    if not (0 <= hour <= 23):
+                        return False, f"Falsches Zeitformat in Zeile {idx + 2}: {label}zeit Stunde '{hour}' muss zwischen 0-23 sein"
+                    if not (0 <= minute <= 59):
+                        return False, f"Falsches Zeitformat in Zeile {idx + 2}: {label}zeit Minute '{minute}' muss zwischen 0-59 sein"
+
+                # Try actual parsing to catch any other issues
+                parse_time_range(time_str)
+
+            except Exception as e:
+                return False, f"Falsches Zeitformat in Zeile {idx + 2}: '{time_str}' - {str(e)}"
+
+    # Validate Modifier column format
     if 'Modifier' in df.columns:
-        try:
-            df['Modifier'].astype(str).str.replace(',', '.').astype(float)
-        except Exception as e:
-            return False, f"Modifier-Spalte ungültiges Format: {str(e)}"
+        for idx, mod_val in enumerate(df['Modifier']):
+            if pd.isna(mod_val):
+                continue  # NaN is OK, will be filled with 1.0
 
-    # Check integer columns for core skills
+            try:
+                # Try to convert to float
+                mod_str = str(mod_val).strip().replace(',', '.')
+                mod_float = float(mod_str)
+
+                # Check reasonable range
+                if mod_float <= 0:
+                    return False, f"Modifier in Zeile {idx + 2} muss größer als 0 sein (Wert: {mod_float})"
+                if mod_float > 10:
+                    return False, f"Modifier in Zeile {idx + 2} ist ungewöhnlich hoch (Wert: {mod_float}). Bitte überprüfen."
+
+            except Exception as e:
+                return False, f"Modifier-Spalte ungültiges Format in Zeile {idx + 2}: {str(e)}"
+
+    # Check skill columns - must be numeric and valid values (0, 1, or 2)
     for skill in SKILL_COLUMNS:
         if skill in df.columns:
-            if not pd.api.types.is_numeric_dtype(df[skill]):
-                return False, f"Spalte '{skill}' sollte numerisch sein"
+            for idx, skill_val in enumerate(df[skill]):
+                if pd.isna(skill_val):
+                    continue  # NaN is OK, will be filled with 0
+
+                try:
+                    skill_int = int(float(skill_val))
+                    if skill_int not in [0, 1, 2]:
+                        return False, f"Spalte '{skill}' in Zeile {idx + 2}: Wert muss 0, 1 oder 2 sein (Wert: {skill_int})"
+                except Exception as e:
+                    return False, f"Spalte '{skill}' in Zeile {idx + 2}: Ungültiger Wert '{skill_val}' - muss numerisch sein"
 
     return True, ""
 
+
+def validate_uploaded_file(file_path: str) -> (bool, str):
+    """
+    Validate an uploaded Excel file before it's processed.
+    Returns (is_valid, error_message) tuple.
+    """
+    try:
+        # Try to open the Excel file
+        excel_file = pd.ExcelFile(file_path)
+
+        # Check for required sheet
+        if 'Tabelle1' not in excel_file.sheet_names:
+            return False, "Blatt 'Tabelle1' nicht gefunden. Die Excel-Datei muss ein Arbeitsblatt namens 'Tabelle1' enthalten."
+
+        # Read the sheet
+        df = pd.read_excel(excel_file, sheet_name='Tabelle1')
+
+        # Check if dataframe is empty
+        if df.empty:
+            return False, "Blatt 'Tabelle1' ist leer. Bitte fügen Sie Daten hinzu."
+
+        # Define required columns
+        required_columns = ['PPL', 'TIME']
+
+        # Validate structure
+        valid, error_msg = validate_excel_structure(df, required_columns)
+        if not valid:
+            return False, error_msg
+
+        return True, ""
+
+    except Exception as e:
+        return False, f"Fehler beim Lesen der Excel-Datei: {str(e)}"
 
 
 # -----------------------------------------------------------
@@ -476,23 +588,37 @@ def check_and_perform_daily_reset():
             continue
         if now.time() >= time(7, 30):
             if os.path.exists(d['scheduled_file_path']):
-                # Reset all counters for this modality before initializing new data
-                d['draw_counts'] = {}
-                d['skill_counts'] = {skill: {} for skill in SKILL_COLUMNS}
-                d['WeightedCounts'] = {}
-                
-                initialize_data(d['scheduled_file_path'], mod)
-                # Instead of deleting, move scheduled file to backup folder
-                backup_dir = os.path.join(app.config['UPLOAD_FOLDER'], "backups")
-                if not os.path.exists(backup_dir):
-                    os.makedirs(backup_dir)
-                backup_file = os.path.join(backup_dir, os.path.basename(d['scheduled_file_path']))
-                os.rename(d['scheduled_file_path'], backup_file)
-                selection_logger.info(f"Scheduled daily file loaded and moved to backup for modality {mod}.")
-                # 3) Live-Backup sofort aktualisieren
-                backup_dataframe(mod)
-                selection_logger.info(f"Live-backup updated for modality {mod} after daily reset.")
-                                
+                # Validate the scheduled file before loading
+                selection_logger.info(f"Validating scheduled file for modality {mod}")
+                is_valid, error_msg = validate_uploaded_file(d['scheduled_file_path'])
+
+                if not is_valid:
+                    selection_logger.error(f"Scheduled file validation failed for modality {mod}: {error_msg}")
+                    # Move invalid file to error folder
+                    error_dir = os.path.join(app.config['UPLOAD_FOLDER'], "errors")
+                    if not os.path.exists(error_dir):
+                        os.makedirs(error_dir)
+                    error_file = os.path.join(error_dir, f"{os.path.basename(d['scheduled_file_path'])}_INVALID_{today.strftime('%Y%m%d')}.xlsx")
+                    os.rename(d['scheduled_file_path'], error_file)
+                    selection_logger.error(f"Invalid scheduled file moved to {error_file}. Keeping old data for modality {mod}.")
+                else:
+                    # Reset all counters for this modality before initializing new data
+                    d['draw_counts'] = {}
+                    d['skill_counts'] = {skill: {} for skill in SKILL_COLUMNS}
+                    d['WeightedCounts'] = {}
+
+                    initialize_data(d['scheduled_file_path'], mod)
+                    # Instead of deleting, move scheduled file to backup folder
+                    backup_dir = os.path.join(app.config['UPLOAD_FOLDER'], "backups")
+                    if not os.path.exists(backup_dir):
+                        os.makedirs(backup_dir)
+                    backup_file = os.path.join(backup_dir, os.path.basename(d['scheduled_file_path']))
+                    os.rename(d['scheduled_file_path'], backup_file)
+                    selection_logger.info(f"Scheduled daily file loaded and moved to backup for modality {mod}.")
+                    # 3) Live-Backup sofort aktualisieren
+                    backup_dataframe(mod)
+                    selection_logger.info(f"Live-backup updated for modality {mod} after daily reset.")
+
             else:
                 selection_logger.info(f"No scheduled file found for modality {mod}. Keeping old data.")
             d['last_reset_date'] = today
@@ -686,7 +812,7 @@ def upload_file():
     if modality not in modality_data:
         modality = 'ct'
     d = modality_data[modality]
-    
+
     if request.method == 'POST':
         if 'file' not in request.files:
             return jsonify({"error": "Keine Datei ausgewählt"}), 400
@@ -694,30 +820,69 @@ def upload_file():
         if file.filename == '':
             return jsonify({"error": "Keine Datei ausgewählt"}), 400
         if not file.filename.endswith('.xlsx'):
-            return jsonify({"error": "Ungültiger Dateityp"}), 400
+            return jsonify({"error": "Ungültiger Dateityp. Nur .xlsx Dateien sind erlaubt."}), 400
+
         scheduled = request.form.get('scheduled_upload', '0')
+
         try:
-            if scheduled == '1':
-                file.save(d['scheduled_file_path'])
-                return redirect(url_for('upload_file', modality=modality))
-            else:
-                # For immediate uploads, reset all counters BEFORE loading the file
-                d['draw_counts'] = {}
-                d['skill_counts'] = {skill: {} for skill in SKILL_COLUMNS}
-                d['WeightedCounts'] = {}
-                global_worker_data['weighted_counts_per_mod'][modality] = {}
-                global_worker_data['assignments_per_mod'][modality] = {}
-                
-                # Now save and load the file
-                file_path = d['default_file_path']
-                file.save(file_path)
-                d['last_uploaded_filename'] = os.path.basename(file_path)
-                initialize_data(file_path, modality)
-                # Update live backup on new upload
-                backup_dataframe(modality)
-                return redirect(url_for('upload_file', modality=modality))
+            # Save to temporary file first for validation
+            import tempfile
+            temp_fd, temp_path = tempfile.mkstemp(suffix='.xlsx')
+            os.close(temp_fd)
+
+            try:
+                file.save(temp_path)
+
+                # Validate the uploaded file
+                selection_logger.info(f"Validating uploaded file for modality {modality}")
+                is_valid, error_msg = validate_uploaded_file(temp_path)
+
+                if not is_valid:
+                    selection_logger.error(f"File validation failed: {error_msg}")
+                    os.remove(temp_path)
+                    return jsonify({"error": f"Datei-Validierung fehlgeschlagen:\n\n{error_msg}"}), 400
+
+                selection_logger.info(f"File validation successful for modality {modality}")
+
+                # File is valid, move it to the proper location
+                if scheduled == '1':
+                    # For scheduled uploads
+                    if os.path.exists(d['scheduled_file_path']):
+                        os.remove(d['scheduled_file_path'])
+                    os.rename(temp_path, d['scheduled_file_path'])
+                    selection_logger.info(f"Scheduled file uploaded and validated for modality {modality}")
+                    return redirect(url_for('upload_file', modality=modality))
+                else:
+                    # For immediate uploads, reset all counters BEFORE loading the file
+                    d['draw_counts'] = {}
+                    d['skill_counts'] = {skill: {} for skill in SKILL_COLUMNS}
+                    d['WeightedCounts'] = {}
+                    global_worker_data['weighted_counts_per_mod'][modality] = {}
+                    global_worker_data['assignments_per_mod'][modality] = {}
+
+                    # Move validated file to default location
+                    file_path = d['default_file_path']
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                    os.rename(temp_path, file_path)
+
+                    d['last_uploaded_filename'] = os.path.basename(file_path)
+                    initialize_data(file_path, modality)
+
+                    # Update live backup on new upload
+                    backup_dataframe(modality)
+                    selection_logger.info(f"Immediate file uploaded, validated and loaded for modality {modality}")
+                    return redirect(url_for('upload_file', modality=modality))
+
+            except Exception as e:
+                # Clean up temp file on any error
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                raise e
+
         except Exception as e:
-            return jsonify({"error": f"Fehler beim Hochladen der Datei: {e}"}), 500
+            selection_logger.error(f"Error during file upload: {str(e)}")
+            return jsonify({"error": f"Fehler beim Hochladen der Datei:\n\n{str(e)}"}), 500
 
     # GET method: Prepare data for the upload page
     # 1. Debug info table from working_hours_df.
