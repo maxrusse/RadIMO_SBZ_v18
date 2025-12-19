@@ -1,12 +1,13 @@
 from flask import (
     Flask, request, jsonify,
     render_template, redirect,
-    url_for, send_from_directory
+    url_for, send_from_directory, flash
 )
 import pandas as pd
 from datetime import datetime, time
 import pytz
 import os
+import re
 from threading import Lock
 
 
@@ -141,6 +142,73 @@ def get_all_workers_by_canonical_id():
         canonical_to_variations[canonical].append(name)
     return canonical_to_variations
 
+def validate_time_string(time_val, context_label="") -> (bool, str):
+    """
+    Validate a single TIME cell/string. Returns (is_valid, error_message).
+    context_label is appended to error messages for clarity (e.g., 'Zeile 2').
+    """
+    label = f" in {context_label}" if context_label else ""
+
+    if pd.isna(time_val) or str(time_val).strip() == "":
+        return False, f"Spalte 'TIME' enthält leere Zelle{label}"
+
+    time_str = str(time_val).strip()
+
+    if '.' in time_str and ':' not in time_str:
+        return False, (
+            f"Falsches Zeitformat{label}: '{time_str}' - Verwenden Sie ':' statt '.'"
+            " (z.B. '11:15' statt '11.15')"
+        )
+
+    if '-' not in time_str:
+        return False, (
+            f"Falsches Zeitformat{label}: '{time_str}' - Format muss 'HH:MM-HH:MM' sein"
+            " (z.B. '08:00-16:00')"
+        )
+
+    try:
+        parts = time_str.split('-')
+        if len(parts) != 2:
+            return False, (
+                f"Falsches Zeitformat{label}: '{time_str}' - Genau ein '-' Zeichen erwartet"
+            )
+
+        start_str, end_str = parts[0].strip(), parts[1].strip()
+
+        for time_part, time_label in [(start_str, "Start"), (end_str, "Ende")]:
+            if ':' not in time_part:
+                return False, (
+                    f"Falsches Zeitformat{label}: {time_label}zeit '{time_part}' muss Format 'HH:MM' haben"
+                )
+
+            time_components = time_part.split(':')
+            if len(time_components) != 2:
+                return False, (
+                    f"Falsches Zeitformat{label}: {time_label}zeit '{time_part}' muss Format 'HH:MM' haben"
+                )
+
+            hour_str, minute_str = time_components
+            if not hour_str.isdigit() or not minute_str.isdigit():
+                return False, (
+                    f"Falsches Zeitformat{label}: {time_label}zeit '{time_part}' enthält nicht-numerische Zeichen"
+                )
+
+            hour, minute = int(hour_str), int(minute_str)
+            if not (0 <= hour <= 23):
+                return False, (
+                    f"Falsches Zeitformat{label}: {time_label}zeit Stunde '{hour}' muss zwischen 0-23 sein"
+                )
+            if not (0 <= minute <= 59):
+                return False, (
+                    f"Falsches Zeitformat{label}: {time_label}zeit Minute '{minute}' muss zwischen 0-59 sein"
+                )
+
+        # Final parsing check
+        parse_time_range(time_str)
+        return True, ""
+    except Exception as e:
+        return False, f"Falsches Zeitformat{label}: '{time_str}' - {str(e)}"
+
 def validate_excel_structure(df: pd.DataFrame, required_columns) -> (bool, str):
     """
     Comprehensive validation of Excel file structure and data formats.
@@ -164,55 +232,9 @@ def validate_excel_structure(df: pd.DataFrame, required_columns) -> (bool, str):
     # Validate TIME format - must be HH:MM-HH:MM
     if 'TIME' in df.columns:
         for idx, time_val in enumerate(df['TIME']):
-            if pd.isna(time_val):
-                return False, f"Spalte 'TIME' enthält leere Zelle in Zeile {idx + 2}"
-
-            time_str = str(time_val).strip()
-
-            # Check for common errors: dots instead of colons
-            if '.' in time_str and ':' not in time_str:
-                return False, f"Falsches Zeitformat in Zeile {idx + 2}: '{time_str}' - Verwenden Sie ':' statt '.' (z.B. '11:15' statt '11.15')"
-
-            # Check for dash separator
-            if '-' not in time_str:
-                return False, f"Falsches Zeitformat in Zeile {idx + 2}: '{time_str}' - Format muss 'HH:MM-HH:MM' sein (z.B. '08:00-16:00')"
-
-            # Try to parse the time range
-            try:
-                parts = time_str.split('-')
-                if len(parts) != 2:
-                    return False, f"Falsches Zeitformat in Zeile {idx + 2}: '{time_str}' - Genau ein '-' Zeichen erwartet"
-
-                start_str, end_str = parts[0].strip(), parts[1].strip()
-
-                # Validate format HH:MM
-                for time_part, label in [(start_str, "Start"), (end_str, "Ende")]:
-                    if ':' not in time_part:
-                        return False, f"Falsches Zeitformat in Zeile {idx + 2}: {label}zeit '{time_part}' muss Format 'HH:MM' haben"
-
-                    time_components = time_part.split(':')
-                    if len(time_components) != 2:
-                        return False, f"Falsches Zeitformat in Zeile {idx + 2}: {label}zeit '{time_part}' muss Format 'HH:MM' haben"
-
-                    hour_str, minute_str = time_components
-
-                    # Check if components are numeric
-                    if not hour_str.isdigit() or not minute_str.isdigit():
-                        return False, f"Falsches Zeitformat in Zeile {idx + 2}: {label}zeit '{time_part}' enthält nicht-numerische Zeichen"
-
-                    hour, minute = int(hour_str), int(minute_str)
-
-                    # Validate ranges
-                    if not (0 <= hour <= 23):
-                        return False, f"Falsches Zeitformat in Zeile {idx + 2}: {label}zeit Stunde '{hour}' muss zwischen 0-23 sein"
-                    if not (0 <= minute <= 59):
-                        return False, f"Falsches Zeitformat in Zeile {idx + 2}: {label}zeit Minute '{minute}' muss zwischen 0-59 sein"
-
-                # Try actual parsing to catch any other issues
-                parse_time_range(time_str)
-
-            except Exception as e:
-                return False, f"Falsches Zeitformat in Zeile {idx + 2}: '{time_str}' - {str(e)}"
+            is_valid_time, time_error = validate_time_string(time_val, f"Zeile {idx + 2}")
+            if not is_valid_time:
+                return False, time_error
 
     # Validate Modifier column format
     if 'Modifier' in df.columns:
@@ -283,6 +305,55 @@ def validate_uploaded_file(file_path: str) -> (bool, str):
 
     except Exception as e:
         return False, f"Fehler beim Lesen der Excel-Datei: {str(e)}"
+
+
+def validate_manual_entry(person: str, time_str: str, modifier_str: str, form_data) -> (bool, str, dict):
+    """
+    Validate fields submitted via the manual edit/add form.
+    Returns (is_valid, error_message, normalized_values).
+    """
+    normalized = {}
+
+    if not person or '(' not in person or ')' not in person:
+        return False, "Name muss ein Kürzel in Klammern enthalten (z.B. 'Max Mustermann (MM)').", {}
+
+    initials_match = re.search(r"\(([A-Za-zÄÖÜäöüß]{2,5})\)\s*$", person)
+    if not initials_match:
+        return False, "Kürzel in Klammern muss aus 2-5 Buchstaben bestehen (z.B. 'MM').", {}
+
+    normalized['person'] = person.strip()
+
+    valid_time, time_error = validate_time_string(time_str, "der Eingabe")
+    if not valid_time:
+        return False, time_error, {}
+    normalized['time'] = str(time_str).strip()
+
+    modifier_clean = modifier_str.strip().replace(',', '.') if modifier_str else "1.0"
+    try:
+        modifier_val = float(modifier_clean)
+    except ValueError:
+        return False, "Modifier muss eine Zahl sein.", {}
+
+    if modifier_val <= 0:
+        return False, "Modifier muss größer als 0 sein.", {}
+    if modifier_val > 10:
+        return False, "Modifier ist ungewöhnlich hoch (>10). Bitte prüfen.", {}
+    normalized['modifier'] = modifier_val
+
+    skill_values = {}
+    for skill in SKILL_COLUMNS:
+        val_str = form_data.get(skill.lower(), '0').strip()
+        try:
+            val_int = int(val_str) if val_str != '' else 0
+        except ValueError:
+            return False, f"Wert für {skill} muss numerisch sein.", {}
+
+        if val_int not in (0, 1, 2):
+            return False, f"Wert für {skill} muss 0, 1 oder 2 sein.", {}
+        skill_values[skill] = val_int
+
+    normalized['skills'] = skill_values
+    return True, "", normalized
 
 
 # -----------------------------------------------------------
@@ -718,15 +789,15 @@ for mod, d in modality_data.items():
         selection_logger.info(f"Kein Default-File und kein Live-Backup gefunden für {mod.upper()}.")
 
         # Ensure the modality's data structures are in a clean, empty state
-        d_mod_data['working_hours_df'] = None
-        d_mod_data['info_texts'] = []
-        d_mod_data['total_work_hours'] = {}
-        d_mod_data['worker_modifiers'] = {}
-        d_mod_data['draw_counts'] = {}
-        d_mod_data['skill_counts'] = {skill: {} for skill in SKILL_COLUMNS}
-        d_mod_data['WeightedCounts'] = {}
+        d['working_hours_df'] = None
+        d['info_texts'] = []
+        d['total_work_hours'] = {}
+        d['worker_modifiers'] = {}
+        d['draw_counts'] = {}
+        d['skill_counts'] = {skill: {} for skill in SKILL_COLUMNS}
+        d['WeightedCounts'] = {}
         # Ensure last_reset_date is not set to today if no data loaded
-        d_mod_data['last_reset_date'] = None
+        d['last_reset_date'] = None
 
 # -----------------------------------------------------------
 # Routes
@@ -1081,11 +1152,21 @@ def edit_entry():
     idx_str = request.form.get('index')
     person  = request.form['person']
     time_str= request.form['time']
-    modifier_str = request.form.get('modifier', '1.0').strip().replace(',', '.')
-    new_modifier = float(modifier_str) if modifier_str else 1.0
+    modifier_str = request.form.get('modifier', '1.0')
+
+    is_valid, error_msg, normalized = validate_manual_entry(person, time_str, modifier_str, request.form)
+    if not is_valid:
+        flash(error_msg, 'error')
+        return redirect(url_for('upload_file', modality=modality))
+
+    new_modifier = normalized['modifier']
+    normalized_skills = normalized['skills']
+    time_str = normalized['time']
+    person = normalized['person']
 
     with lock:
         if d['working_hours_df'] is None:
+            flash("Keine Daten geladen. Bitte zuerst eine Excel-Datei hochladen.", 'error')
             return redirect(url_for('upload_file', modality=modality))
 
         if idx_str:
@@ -1103,14 +1184,11 @@ def edit_entry():
 
                 # Ensure all SKILL_COLUMNS exist in the dataframe
                 for skill in SKILL_COLUMNS:
-                    val_str = request.form.get(skill.lower(), '0').strip()
-                    new_val = int(val_str) if val_str else 0
-                    
                     # Add column if it doesn't exist
                     if skill not in d['working_hours_df'].columns:
                         d['working_hours_df'][skill] = 0
-                        
-                    d['working_hours_df'].at[idx, skill] = new_val
+
+                    d['working_hours_df'].at[idx, skill] = normalized_skills[skill]
 
                 if person != old_person:
                     d['draw_counts'][person] = d['draw_counts'].get(person, 0) + d['draw_counts'].pop(old_person, 0)
@@ -1122,9 +1200,12 @@ def edit_entry():
                             d['skill_counts'][skill][old_person] = 0
                         if person not in d['skill_counts'][skill]:
                             d['skill_counts'][skill][person] = 0
-                            
+
                         d['skill_counts'][skill][person] = d['skill_counts'][skill].get(person, 0) + d['skill_counts'][skill].pop(old_person, 0)
                     d['WeightedCounts'][person] = d['WeightedCounts'].get(person, 0) + d['WeightedCounts'].pop(old_person, 0)
+            else:
+                flash("Index ist ungültig.", 'error')
+                return redirect(url_for('upload_file', modality=modality))
                 
         else:
             # This is for adding a new row - similar fixes needed here
@@ -1136,8 +1217,7 @@ def edit_entry():
                 'Modifier': new_modifier,
             }
             for skill in SKILL_COLUMNS:
-                val_str = request.form.get(skill.lower(), '0').strip()
-                data_dict[skill] = int(val_str) if val_str else 0
+                data_dict[skill] = normalized_skills[skill]
             new_row = pd.DataFrame([data_dict])
             
             # Add missing columns to working_hours_df if needed
@@ -1163,10 +1243,11 @@ def edit_entry():
             axis=1
         )
         d['total_work_hours'] = d['working_hours_df'].groupby('PPL')['shift_duration'].sum().to_dict()
-        
+
         # Update live backup after editing
         backup_dataframe(modality)
 
+    flash("Eintrag wurde aktualisiert.", 'success')
     return redirect(url_for('upload_file', modality=modality))
 @app.route('/delete', methods=['POST'])
 def delete_entry():

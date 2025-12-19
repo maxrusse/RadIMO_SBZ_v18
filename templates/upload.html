@@ -64,6 +64,26 @@
     body[data-modality="ct"] { background: var(--ct-bg); }
     body[data-modality="mr"] { background: var(--mr-bg); }
     body[data-modality="xray"] { background: var(--xray-bg); }
+
+    .flash-messages { margin-bottom: 1rem; }
+    .flash-message {
+      padding: 0.8rem 1rem;
+      border-radius: 6px;
+      border-left: 4px solid var(--primary-color);
+      background: #f7fbff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 0.6rem;
+    }
+    .flash-message.error {
+      border-color: #dc3545;
+      background: #fff5f5;
+      color: #721c24;
+    }
+    .flash-message.success {
+      border-color: #28a745;
+      background: #f2fff6;
+      color: #155724;
+    }
     
     /* Modal styles for password input */
     #authModal {
@@ -339,8 +359,18 @@
     <a href="{{ url_for('index', modality=modality) }}" class="back-button">Zurück zur Hauptseite</a>
     <a href="{{ url_for('logout', modality=modality) }}" class="back-button">Logout</a>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash-message {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
       <!-- Statistics Section -->
-      
+
     <div class="card">
       <h2>Statistiken</h2>
       <div class="table-container">
