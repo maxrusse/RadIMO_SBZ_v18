@@ -8,6 +8,7 @@ from datetime import datetime, time
 import pytz
 import os
 import re
+import shutil
 from threading import Lock
 
 
@@ -920,7 +921,7 @@ def upload_file():
                     # For scheduled uploads
                     if os.path.exists(d['scheduled_file_path']):
                         os.remove(d['scheduled_file_path'])
-                    os.rename(temp_path, d['scheduled_file_path'])
+                    shutil.move(temp_path, d['scheduled_file_path'])
                     selection_logger.info(f"Scheduled file uploaded and validated for modality {modality}")
                     return redirect(url_for('upload_file', modality=modality))
                 else:
@@ -935,7 +936,7 @@ def upload_file():
                     file_path = d['default_file_path']
                     if os.path.exists(file_path):
                         os.remove(file_path)
-                    os.rename(temp_path, file_path)
+                    shutil.move(temp_path, file_path)
 
                     d['last_uploaded_filename'] = os.path.basename(file_path)
                     initialize_data(file_path, modality)
