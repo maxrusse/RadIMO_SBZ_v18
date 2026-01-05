@@ -1,12 +1,12 @@
 ============================================================
-Verfahrensverzeichnis – RadIMO (V16)  # update zu v17 ausstehend.
+Verfahrensverzeichnis – RadIMO (V18)
 ============================================================
 
 1. Bezeichnung und Beschreibung
 ------------------------------------------------------------
 Verfahrensname / Projekt:
   RadIMO – Koordinationssystem für Schichtzuweisungen
-  in der Radiologie (Version V16)
+  in der Radiologie (Version V18)
 
 Beschreibung:
   System zur automatisierten Schichtplanung von Radiologie-
@@ -19,7 +19,7 @@ Beschreibung:
 2. Verzeichnis der IT-Komponenten
 ------------------------------------------------------------
 Projektverzeichnis:
-/nfs/norasys/notebooks/russe/radimo16
+/nfs/norasys/notebooks/russe/radimo18
 
 Wichtige Dateien und Verzeichnisse:
   - app.py                → Hauptlogik und API
@@ -84,7 +84,7 @@ Ansprechpartner:
 7. Versionshistorie
 ------------------------------------------------------------
 Aktuelle Version:
-  V16 (Produktivstand: radimo16)
+  V18 (Produktivstand: radimo18)
 
 Änderungen:
   - Einführung der Backup-Logik (tagesaktuell)
