@@ -318,9 +318,9 @@ def validate_manual_entry(person: str, time_str: str, modifier_str: str, form_da
     if not person or '(' not in person or ')' not in person:
         return False, "Name muss ein Kürzel in Klammern enthalten (z.B. 'Max Mustermann (MM)').", {}
 
-    initials_match = re.search(r"\(([A-Za-zÄÖÜäöüß]{2,5})\)\s*$", person)
+    initials_match = re.search(r"\(([A-Za-zÄÖÜäöüß]{2,})\)\s*$", person)
     if not initials_match:
-        return False, "Kürzel in Klammern muss aus 2-5 Buchstaben bestehen (z.B. 'MM').", {}
+        return False, "Kürzel in Klammern muss aus mindestens 2 Buchstaben bestehen (z.B. 'MM' oder 'RADIMO').", {}
 
     normalized['person'] = person.strip()
 
