@@ -765,6 +765,14 @@ def backup_dataframe(modality: str):
 # -----------------------------------------------------------
 # Startup: initialize each modality – zuerst das aktuelle Live-Backup, dann das Default-File
 # -----------------------------------------------------------
+# On startup: if after 7:30, assume reset already happened today (prevents counter wipe on restart)
+_startup_now = get_local_berlin_now()
+if _startup_now.time() >= time(7, 30):
+    global_worker_data['last_reset_date'] = _startup_now.date()
+    for mod in allowed_modalities:
+        modality_data[mod]['last_reset_date'] = _startup_now.date()
+    selection_logger.info(f"Startup after 7:30 - set last_reset_date to {_startup_now.date()} to prevent re-reset")
+
 for mod, d in modality_data.items():
     backup_dir  = os.path.join(app.config['UPLOAD_FOLDER'], "backups")
     backup_path = os.path.join(backup_dir, f"SBZ_{mod.upper()}_live.xlsx")
